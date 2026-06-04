@@ -1,0 +1,73 @@
+// 1. Configuração do Gerador do Cliente Prisma (Padrão de Indústria)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+
+}
+//Defenição dos modelos de dados
+model UserAdmin {
+  id              Int       @id @default(autoincrement())
+  username        String    @unique
+  passwordHash    String    @map("password_hash")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastLogin       DateTime? @map("last_login")
+  failedAttempts  Int       @default(0) @map("failed_attempts")
+  isActive        Boolean   @default(true) @map("is_active")
+
+  @@map("users_admin")
+}
+
+model Student {
+  id           Int            @id @default(autoincrement())
+  fullName     String         @map("full_name")
+  phoneNumber  String         @map("phone_number")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  
+  trainingPlans TrainingPlan[]
+  whatsappLogs  WhatsappLog[]
+
+  @@map("students")
+}
+
+model TrainingPlan {
+  id        Int      @id @default(autoincrement())
+  studentId Int      @map("student_id")
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  student   Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exercises TrainingExercise[]
+
+  @@map("training_plans")
+}
+
+model TrainingExercise {
+  id             Int     @id @default(autoincrement())
+  trainingPlanId Int     @map("training_plan_id")
+  exerciseName   String  @map("exercise_name")
+  sets           Int
+  reps           Int
+  restTime       String  @map("rest_time") // Ex: "60s" ou "1m30s"
+  notes          String? @db.Text
+
+  trainingPlan   TrainingPlan @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
+
+  @@map("training_exercises")
+}
+
+model WhatsappLog {
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @map("student_id")
+  message      String   @db.Text
+  status       String   // "SENT", "FAILED", "PENDING"
+  errorMessage String?  @map("error_message") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_logs")
+}
