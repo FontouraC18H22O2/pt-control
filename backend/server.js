@@ -10,6 +10,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
 const trainingRoutes = require('./src/routes/trainingRoutes');
 const whatsappRoutes = require('./src/routes/whatsappRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Rota de Teste de Diagnóstico
 app.get('/api/status', (req, res) => {
