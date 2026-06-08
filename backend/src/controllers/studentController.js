@@ -4,26 +4,33 @@ const { PrismaMariaDb } = require('@prisma/adapter-mariadb');
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL);
 const prisma = new PrismaClient({ adapter });
 
-// 1. Criar um novo aluno (POST)
+// 1. CRIAR UM NOVO ALUNO (POST) - Vinculado ao PT logado
 const createStudent = async (req, res) => {
   try {
-    // 🔥 CORREÇÃO: Ler o que o Frontend (React) realmente envia
     const { nome, whatsapp, status } = req.body; 
+    const ptId = req.userId; // 🔑 Injetado pelo authMiddleware do token JWT
+
+    // 🚨 BARREIRA DE SEGURANÇA: Bloqueia antes de chamar o Prisma se o ID estiver em falta
+    if (!ptId) {
+      return res.status(401).json({ 
+        error: 'Sessão inválida ou expirada. Por favor, faça login novamente para registar alunos.' 
+      });
+    }
 
     if (!nome || !whatsapp) {
       return res.status(400).json({ error: 'O nome completo e o número de telemóvel são obrigatórios.' });
     }
 
-    // Grava no MySQL usando os nomes do teu schema.prisma
+    // Grava no MariaDB garantindo que este aluno pertence estritamente a este PT
     const newStudent = await prisma.student.create({
       data: { 
-        fullName: nome, 
-        phoneNumber: whatsapp,
-        status: status || 'Ativo'
+        fullName: nome.trim(), 
+        phoneNumber: whatsapp.trim(),
+        status: status || 'Ativo',
+        userAdminId: ptId // 🔒 Vinculação forçada do dono do registo
       }
     });
 
-    // Devolve formatado em português para o Frontend injetar na tabela imediatamente
     return res.status(201).json({ 
       id: newStudent.id,
       nome: newStudent.fullName,
@@ -37,14 +44,19 @@ const createStudent = async (req, res) => {
   }
 };
 
-// 2. Listar todos os alunos (GET)
+// 2. LISTAR APENAS OS ALUNOS DO PT LOGADO (GET) - Isolamento de Dados
 const getAllStudents = async (req, res) => {
   try {
+    const ptId = req.userId; // 🔑 ID do PT vindo do token
+
+    // O findMany procura estritamente apenas os alunos deste PT
     const students = await prisma.student.findMany({
+      where: {
+        userAdminId: ptId
+      },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Mapeia para o formato que a tabela visual espera
     const formatados = students.map(s => ({
       id: s.id,
       nome: s.fullName,
@@ -60,28 +72,36 @@ const getAllStudents = async (req, res) => {
   }
 };
 
-// 3. Atualizar dados de um aluno (PUT)
+// 3. ATUALIZAR DADOS DE UM ALUNO (PUT) - Valida a posse do aluno
 const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    // 🔥 CORREÇÃO: Mapear os campos recebidos em português para a atualização
     const { nome, whatsapp, status } = req.body; 
+    const ptId = req.userId; // 🔑 ID do PT logado
 
     const studentId = parseInt(id);
     if (isNaN(studentId)) {
       return res.status(400).json({ error: 'ID do aluno inválido.' });
     }
 
+    // Cibersegurança: Garantir que o aluno pertence ao PT antes de atualizar
+    const alunoOriginal = await prisma.student.findUnique({
+      where: { id: studentId }
+    });
+
+    if (!alunoOriginal || alunoOriginal.userAdminId !== ptId) {
+      return res.status(403).json({ error: 'Acesso negado. Não tem permissão para alterar este atleta.' });
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id: studentId },
       data: { 
-        fullName: nome, 
-        phoneNumber: whatsapp,
+        fullName: nome.trim(), 
+        phoneNumber: whatsapp.trim(),
         status: status
       }
     });
 
-    // Devolve as chaves traduzidas de volta para o React atualizar a linha da tabela
     return res.status(200).json({ 
       id: updatedStudent.id,
       nome: updatedStudent.fullName,
@@ -91,21 +111,28 @@ const updateStudent = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erro no terminal ao atualizar aluno:', error);
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Aluno não encontrado.' });
-    }
     return res.status(500).json({ error: 'Erro interno ao atualizar o aluno.' });
   }
 };
 
-// 4. Remover um aluno (DELETE)
+// 4. REMOVER UM ALUNO (DELETE) - Valida a posse do aluno
 const deleteStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const studentId = parseInt(id);
+    const ptId = req.userId; // 🔑 ID do PT logado
 
+    const studentId = parseInt(id);
     if (isNaN(studentId)) {
       return res.status(400).json({ error: 'ID do aluno inválido.' });
+    }
+
+    // Cibersegurança: Garantir que o aluno pertence ao PT antes de eliminar
+    const alunoOriginal = await prisma.student.findUnique({
+      where: { id: studentId }
+    });
+
+    if (!alunoOriginal || alunoOriginal.userAdminId !== ptId) {
+      return res.status(403).json({ error: 'Acesso negado. Não tem permissão para remover este atleta.' });
     }
 
     await prisma.student.delete({
@@ -115,9 +142,6 @@ const deleteStudent = async (req, res) => {
     return res.status(200).json({ message: 'Aluno removido do sistema com sucesso.' });
   } catch (error) {
     console.error('❌ Erro no terminal ao remover aluno:', error);
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Aluno não encontrado.' });
-    }
     return res.status(500).json({ error: 'Erro interno ao remover o aluno.' });
   }
 };

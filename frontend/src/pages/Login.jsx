@@ -1,113 +1,102 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { loginRequest } from '../services/authService';
+import axios from 'axios';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const { login } = useAuth();
+  const { login } = useAuth(); // Vem do teu AuthContext atualizado
   const navigate = useNavigate();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(false);
-
-    if (!username || !password) {
-      setError('Por favor, preencha todos os campos obrigatórios.');
-      return;
-    }
+    setErro('');
+    setLoading(true);
 
     try {
-      setLoading(true);
-      // 1. Disparar o pedido HTTP para a API
-      const data = await loginRequest(username, password);
-      
-      // 2. Guardar o token no estado global (AuthContext)
-      login(data.token);
-      
-      // 3. Redirecionar o PT instantaneamente para o Dashboard seguro
+      // 🚀 Faz o pedido para o endpoint correto do Backend
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email: email.toLowerCase().trim(),
+        password
+      });
+
+      // Extrai o token e os dados do userAdmin devolvidos pelo controller
+      const { token, user } = response.data;
+
+      // Executa a função do contexto para injetar o token no Axios e guardar no LocalStorage
+      login(token, user);
+
+      // Redireciona o Personal Trainer para o Dashboard
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Não foi possível ligar ao servidor do PT.');
+      console.error(err);
+      setErro(err.response?.data?.error || 'Falha no login. Verifique as suas credenciais.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-white px-4">
-      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl shadow-2xl max-w-md w-full">
+    <div className="flex items-center justify-center w-full min-h-screen p-4 bg-neutral-950">
+      <div className="w-full max-w-md p-8 space-y-6 border shadow-2xl bg-neutral-900 border-neutral-800 rounded-2xl">
         
-        {/* Cabeçalho */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-black text-white">
             PT <span className="text-fitnessGym">Management</span>
           </h1>
-          <p className="text-neutral-400 text-sm mt-2">
-            Inicie sessão para gerir os seus alunos e treinos
-          </p>
+          <p className="text-sm text-neutral-400">Insira as suas credenciais de treinador</p>
         </div>
 
-        {/* Caixa de Notificação de Erro */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl flex items-center gap-2 animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>{error}</span>
+        {erro && (
+          <div className="p-3 text-xs text-red-400 border bg-red-500/10 border-red-500/20 rounded-xl">
+            ⚠️ {erro}
           </div>
         )}
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
-              Utilizador
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-neutral-300">Email do PT</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Ex: admin_pt"
-              disabled={loading}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-fitnessGym transition-colors disabled:opacity-50"
+              type="email"
+              placeholder="exemplo@ginasio.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 text-sm text-white transition-colors border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym"
+              required
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
-              Palavra-passe
-            </label>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-neutral-300">Password</label>
             <input
               type="password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={loading}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-fitnessGym transition-colors disabled:opacity-50"
+              className="w-full px-4 py-3 text-sm text-white transition-colors border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym"
+              required
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-fitnessGym hover:bg-emerald-600 text-neutral-950 font-semibold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/10 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 mt-2 text-sm font-black tracking-wider uppercase transition-all cursor-pointer rounded-xl bg-fitnessGym text-neutral-950 hover:bg-emerald-400 disabled:opacity-50"
           >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-neutral-950"></div>
-                <span>A validar credenciais...</span>
-              </>
-            ) : (
-              <span>Entrar no Sistema</span>
-            )}
+            {loading ? 'A autenticar...' : 'Entrar no Sistema'}
           </button>
         </form>
+
+        {/* ⚡ NOVO: Link para o ecrã de registo que vamos mapear a seguir */}
+        <div className="pt-2 text-center">
+          <Link to="/register" className="text-xs font-medium transition-colors text-neutral-400 hover:text-fitnessGym">
+            Não tem uma conta de PT? <span className="font-bold underline">Crie uma aqui</span>
+          </Link>
+        </div>
 
       </div>
     </div>

@@ -7,54 +7,63 @@ datasource db {
   provider = "mysql"
 
 }
-//Defenição dos modelos de dados
+// Definição dos modelos de dados
+
 model UserAdmin {
-  id              Int       @id @default(autoincrement())
-  username        String    @unique
-  passwordHash    String    @map("password_hash")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  lastLogin       DateTime? @map("last_login")
-  failedAttempts  Int       @default(0) @map("failed_attempts")
-  isActive        Boolean   @default(true) @map("is_active")
+  id             Int       @id @default(autoincrement())
+  email          String    @unique // Alterado de username para email para o fluxo JWT convencional
+  nome           String    // Nome do Personal Trainer para exibir na Sidebar/Dashboard
+  passwordHash   String    @map("password_hash")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastLogin      DateTime? @map("last_login")
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  isActive       Boolean   @default(true) @map("is_active")
+
+  
+  students       Student[]
 
   @@map("users_admin")
 }
 
 model Student {
   id           Int            @id @default(autoincrement())
+  userAdminId  Int            @map("user_admin_id") // 🔥 ADICIONADO: Liga este aluno ao seu PT criador
   fullName     String         @map("full_name")
   phoneNumber  String         @map("phone_number")
-  status       String         @default("Ativo") // 🔥 ADICIONADO: Para bater certo com o Frontend
+  status       String         @default("Ativo")
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
   
+
+  userAdmin    UserAdmin      @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
+
   trainingPlans TrainingPlan[]
   whatsappLogs  WhatsappLog[]
-  weightLogs   WeightLog[]
+  weightLogs    WeightLog[]
 
   @@map("students")
 }
 
 model TrainingPlan {
-  id        Int      @id @default(autoincrement())
-  studentId Int      @map("student_id")
-  notes     String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id          Int      @id @default(autoincrement())
+  studentId   Int      @map("student_id")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  student   Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  exercises TrainingExercise[]
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exercises   TrainingExercise[]
 
   @@map("training_plans")
 }
 
 model TrainingExercise {
-  id             Int     @id @default(autoincrement())
-  trainingPlanId Int     @map("training_plan_id")
-  exerciseName   String  @map("exercise_name")
+  id             Int          @id @default(autoincrement())
+  trainingPlanId Int          @map("training_plan_id")
+  exerciseName   String       @map("exercise_name")
   sets           Int
   reps           Int
-  restTime       String  @map("rest_time") // Ex: "60s" ou "1m30s"
-  notes          String? @db.Text
+  restTime       String       @map("rest_time") 
+  notes          String?      @db.Text
 
   trainingPlan   TrainingPlan @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
 
@@ -65,7 +74,7 @@ model WhatsappLog {
   id           Int      @id @default(autoincrement())
   studentId    Int      @map("student_id")
   message      String   @db.Text
-  status       String   // "SENT", "FAILED", "PENDING"
+  status       String   
   errorMessage String?  @map("error_message") @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
 
@@ -75,15 +84,14 @@ model WhatsappLog {
 }
 
 model WeightLog {
-  id          Int      @id @default(autoincrement())
-  studentId   Int      @map("student_id")
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @map("student_id")
   exerciseName String   @map("exercise_name")
-  weight      Float    // Carga levantada em kg
-  repsDone    Int?     @map("reps_done") // Opcional: quantidade de repetições feitas com essa carga
-  createdAt   DateTime @default(now()) @map("created_at")
+  weight       Float    
+  repsDone     Int?     @map("reps_done") 
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  // Relações
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("weight_logs")
 }

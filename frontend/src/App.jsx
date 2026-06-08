@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Alunos from './pages/Alunos'; // Importar nova página
 import Treinos from './pages/Treinos'; // Importar nova página
@@ -15,6 +16,7 @@ function App() {
         <Routes>
           {/* Rota Pública */}
           <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Grupo de Rotas Privadas e Aninhadas */}
           <Route 

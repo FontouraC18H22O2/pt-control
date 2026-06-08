@@ -9,9 +9,19 @@ const getPlanByStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
     const id = parseInt(studentId);
+    const ptId = req.userId; // 🔑 Injetado pelo authMiddleware
 
     if (isNaN(id)) {
       return res.status(400).json({ error: 'ID do aluno inválido.' });
+    }
+
+    // 🔒 CIBERSEGURANÇA: Validar se este aluno pertence estritamente ao PT autenticado
+    const aluno = await prisma.student.findUnique({
+      where: { id }
+    });
+
+    if (!aluno || aluno.userAdminId !== ptId) {
+      return res.status(403).json({ error: 'Acesso negado. Este atleta não está associado à sua conta.' });
     }
 
     // Procura o plano mais recente do aluno e inclui os respetivos exercícios
@@ -39,14 +49,28 @@ const saveTrainingPlan = async (req, res) => {
   try {
     const { studentId, notes, exercises } = req.body;
     const id = parseInt(studentId);
+    const ptId = req.userId; // 🔑 Injetado pelo authMiddleware
 
     if (isNaN(id)) {
       return res.status(400).json({ error: 'ID do aluno inválido.' });
     }
 
+    if (!exercises || !Array.isArray(exercises)) {
+      return res.status(400).json({ error: 'A lista de exercícios é obrigatória.' });
+    }
+
+    // 🔒 CIBERSEGURANÇA: Impedir que um PT guarde treinos no perfil de um aluno de outro PT
+    const aluno = await prisma.student.findUnique({
+      where: { id }
+    });
+
+    if (!aluno || aluno.userAdminId !== ptId) {
+      return res.status(403).json({ error: 'Acesso negado. Não tem permissão para alterar o plano deste atleta.' });
+    }
+
     // Usamos uma Transação do Prisma para garantir integridade (ou grava tudo ou falha tudo)
     const result = await prisma.$transaction(async (tx) => {
-      // Opcional: Apaga o plano anterior se quiseres que o aluno só tenha um plano ativo de cada vez
+      // Apaga o plano anterior do aluno para manter apenas o plano ativo atual
       await tx.trainingPlan.deleteMany({
         where: { studentId: id }
       });

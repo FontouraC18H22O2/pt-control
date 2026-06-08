@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
-// 1. Importar todos os módulos de rotas criados
+// 1. Importar todos os módulos de rotas criados (Sem Duplicações)
 const authRoutes = require('./src/routes/authRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
 const trainingRoutes = require('./src/routes/trainingRoutes');
@@ -46,7 +46,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/weights', weightRoutes);
 
 // Rota de Teste de Diagnóstico
