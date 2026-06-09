@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        fitnessGym: '#10B981', 
+        fitnessGym: '#dc2626', 
         darkBg: '#121212',
         darkCard: '#1E1E1E'
       }

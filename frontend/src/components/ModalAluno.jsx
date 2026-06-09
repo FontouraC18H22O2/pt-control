@@ -134,7 +134,7 @@ export default function ModalAluno({ isOpen, onClose, onSave, alunoParaEditar })
             </button>
             <button
               type="submit"
-              className="px-4 py-2.5 rounded-xl bg-fitnessGym hover:bg-emerald-600 text-neutral-950 font-semibold text-sm transition-colors cursor-pointer shadow-lg shadow-emerald-500/10"
+             className="px-4 py-2.5 rounded-xl bg-fitnessGym hover:bg-red-700 text-white font-bold text-sm transition-colors cursor-pointer shadow-lg shadow-red-500/20"
             >
               {alunoParaEditar ? 'Atualizar Dados' : 'Guardar Aluno'}
             </button>

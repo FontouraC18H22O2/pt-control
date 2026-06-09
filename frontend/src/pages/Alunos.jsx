@@ -96,7 +96,7 @@ export default function Alunos() {
         
         <button 
           onClick={handleAbrirCriar}
-          className="bg-fitnessGym hover:bg-emerald-600 text-neutral-950 font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer text-sm font-medium"
+         className="bg-fitnessGym hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-red-500/10 flex items-center gap-2 text-sm cursor-pointer"
         >
           + Novo Aluno
         </button>

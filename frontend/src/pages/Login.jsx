@@ -85,7 +85,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-2 text-sm font-black tracking-wider uppercase transition-all cursor-pointer rounded-xl bg-fitnessGym text-neutral-950 hover:bg-emerald-400 disabled:opacity-50"
+           className="w-full py-3 mt-2 text-sm font-black tracking-wider text-white uppercase transition-all shadow-lg cursor-pointer rounded-xl bg-fitnessGym hover:bg-red-700 shadow-red-500/10 disabled:opacity-50"
           >
             {loading ? 'A autenticar...' : 'Entrar no Sistema'}
           </button>

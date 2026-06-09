@@ -422,7 +422,7 @@ export default function Treinos() {
                     <button
                       onClick={handleSavePlanoGeral}
                       disabled={loading}
-                     className="px-6 py-2.5 rounded-xl bg-fitnessGym hover:bg-emerald-600 text-neutral-950 font-bold text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-emerald-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                     className="px-6 py-2.5 rounded-xl bg-fitnessGym hover:bg-red-700 text-white font-bold text-sm transition-all duration-200 cursor-pointer shadow-lg shadow-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {loading ? "A Gravar..." : "Sincronizar Plano no MySQL"}
                     </button>

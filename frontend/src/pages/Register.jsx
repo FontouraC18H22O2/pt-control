@@ -101,7 +101,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading || sucesso}
-            className="w-full py-3 mt-2 text-sm font-black tracking-wider uppercase transition-all duration-200 shadow-lg cursor-pointer rounded-xl bg-fitnessGym text-neutral-950 shadow-emerald-500/10 hover:bg-emerald-400 disabled:opacity-40"
+            className="w-full py-3 mt-2 text-sm font-black tracking-wider text-white uppercase transition-all duration-200 shadow-lg cursor-pointer rounded-xl bg-fitnessGym shadow-red-500/10 hover:bg-red-700 disabled:opacity-40"
           >
             {loading ? 'A processar...' : 'Finalizar Registo'}
           </button>
