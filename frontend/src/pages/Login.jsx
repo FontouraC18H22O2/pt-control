@@ -62,7 +62,7 @@ export default function Login() {
             <label className="text-xs font-semibold text-neutral-300">Email do PT</label>
             <input
               type="email"
-              placeholder="exemplo@ginasio.com"
+              placeholder="exemplo@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 text-sm text-white transition-colors border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym"
@@ -94,7 +94,7 @@ export default function Login() {
         {/* ⚡ NOVO: Link para o ecrã de registo que vamos mapear a seguir */}
         <div className="pt-2 text-center">
           <Link to="/register" className="text-xs font-medium transition-colors text-neutral-400 hover:text-fitnessGym">
-            Não tem uma conta? <span className="font-bold underline">Crie uma aqui</span>
+            Não tem uma conta? <span className="font-bold underline">Peça uma aqui!</span>
           </Link>
         </div>
 

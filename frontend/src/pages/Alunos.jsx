@@ -11,10 +11,24 @@ export default function Alunos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // 🌟 ESTÉTICA INTEGRADA: Estado para as notificações Toast atrativas
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // 🌟 ESTÉTICA INTEGRADA: Estado para o Modal Customizado de Eliminação
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
+
   // CARREGAMENTO INICIAL
   useEffect(() => {
     carregarAlunos();
   }, []);
+
+  // Função auxiliar para disparar o Toast de feedback
+  const showNotification = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
 
   const carregarAlunos = async () => {
     try {
@@ -23,13 +37,13 @@ export default function Alunos() {
       const dados = await studentService.getAllStudents();
       setAlunos(dados);
     } catch (err) {
-      setError(err);
+      setError(err?.message || 'Não foi possível carregar a lista de alunos.');
     } finally {
       setLoading(false);
     }
   };
 
-  //FUNÇÃO HÍBRIDA: Gravar Novo ou Guardar Atualização via API
+  // FUNÇÃO HÍBRIDA: Gravar Novo ou Guardar Atualização via API
   const handleSaveAluno = async (dadosFormulario) => {
     try {
       setError('');
@@ -40,19 +54,22 @@ export default function Alunos() {
         
         // Substitui a linha antiga na tabela de forma imutável
         setAlunos(alunos.map(aluno => aluno.id === alunoSelecionado.id ? alunoAtualizado : aluno));
+        showNotification('Alterações feitas com sucesso!', 'success');
       } else {
         // ---------------- MODAL EM MODO CRIAÇÃO (POST) ----------------
         const alunoCriado = await studentService.createStudent(dadosFormulario);
         setAlunos([...alunos, alunoCriado]);
+        showNotification('Aluno registado com sucesso!', 'success');
       }
+      setIsModalOpen(false);
     } catch (err) {
-      alert(`Erro ao processar operação: ${err}`);
+      showNotification(`Erro ao processar operação.`, 'error');
     } finally {
       setAlunoSelecionado(null); // Limpa o estado após fechar/salvar
     }
   };
 
-  //Controladores de Abertura Diferenciada
+  // Controladores de Abertura Diferenciada
   const handleAbrirCriar = () => {
     setAlunoSelecionado(null);
     setIsModalOpen(true);
@@ -63,18 +80,22 @@ export default function Alunos() {
     setIsModalOpen(true);
   };
 
-  // Remover Aluno via API
-  const handleDeleteAluno = async (id, nome) => {
-    const confirmar = window.confirm(`Tem a certeza que deseja remover o(a) aluno(a) ${nome} do sistema?`);
-    
-    if (confirmar) {
-      try {
-        setError('');
-        await studentService.deleteStudent(id);
-        setAlunos(alunos.filter(aluno => aluno.id !== id));
-      } catch (err) {
-        alert(`Erro ao remover o aluno: ${err}`);
-      }
+  // 🌟 NOVO: Substitui o window.confirm pelo diálogo escuro premium
+  const handleOpenDeleteConfirm = (id, nome) => {
+    setDeleteModal({ open: true, id, name: nome });
+  };
+
+  // 🌟 NOVO: Trata da eliminação física real a partir do modal customizado
+  const handleConfirmDelete = async () => {
+    try {
+      setError('');
+      await studentService.deleteStudent(deleteModal.id);
+      setAlunos(alunos.filter(aluno => aluno.id !== deleteModal.id));
+      setDeleteModal({ open: false, id: null, name: '' });
+      showNotification('Aluno removido do sistema com sucesso!', 'success');
+    } catch (err) {
+      setDeleteModal({ open: false, id: null, name: '' });
+      showNotification('Erro ao tentar remover o aluno.', 'error');
     }
   };
 
@@ -84,7 +105,22 @@ export default function Alunos() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      
+      {/* 🌟 NOTIFICAÇÃO TOAST FLUTUANTE DE SUCESSO/ERRO */}
+      {toast.show && (
+        <div className="fixed z-50 duration-300 top-6 right-6 animate-in fade-in slide-in-from-top-4">
+          <div className={`px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border text-sm font-semibold backdrop-blur-md ${
+            toast.type === 'success' 
+              ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/30' 
+              : 'bg-red-950/90 text-red-400 border-red-500/30'
+          }`}>
+            <span>{toast.type === 'success' ? '✅' : '⚠️'}</span>
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -94,7 +130,7 @@ export default function Alunos() {
           </p>
         </div>
         
-        <button 
+         <button 
           onClick={handleAbrirCriar}
          className="bg-fitnessGym hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-red-500/10 flex items-center gap-2 text-sm cursor-pointer"
         >
@@ -145,18 +181,17 @@ export default function Alunos() {
                   alunosFiltrados.map((aluno) => (
                     <tr key={aluno.id} className="transition-colors hover:bg-neutral-800/30">
                       <td className="p-4 font-semibold text-white">{aluno.nome}</td>
-                      <td className="p-4 font-mono text-neutral-400">{aluno.whatsapp}</td>
+                      <td className="p-4 font-mono text-neutral-400">{aluno.whatsapp || 'Sem contacto'}</td>
                       <td className="p-4 text-center">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                           aluno.status === 'Ativo' 
-                            ? 'bg-emerald-500/10 text-fitnessGym' 
+                            ? 'bg-emerald-500/10 text-emerald-400' 
                             : 'bg-red-500/10 text-red-400'
                         }`}>
                           {aluno.status}
                         </span>
                       </td>
                       <td className="p-4 space-x-2 text-right">
-                        {/* 🔥 Botão do lápis agora dispara a edição carregando o objeto aluno */}
                         <button 
                           onClick={() => handleAbrirEditar(aluno)}
                           className="p-1 transition-colors cursor-pointer text-neutral-400 hover:text-white" 
@@ -165,7 +200,7 @@ export default function Alunos() {
                           ✏️
                         </button>
                         <button 
-                          onClick={() => handleDeleteAluno(aluno.id, aluno.nome)}
+                          onClick={() => handleOpenDeleteConfirm(aluno.id, aluno.nome)}
                           className="p-1 text-red-400 transition-colors cursor-pointer hover:text-red-500" 
                           title="Remover Aluno"
                         >
@@ -187,13 +222,52 @@ export default function Alunos() {
         </div>
       )}
 
-      {/* Injeção das propriedades para o Modal saber o que fazer */}
+      {/* Injeção das propriedades para o Modal */}
       <ModalAluno 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setAlunoSelecionado(null); }} 
         onSave={handleSaveAluno} 
         alunoParaEditar={alunoSelecionado}
       />
+
+      {/* 🌟 MODAL ATRATIVO DE CONFIRMAÇÃO DE APAGAR ALUNO */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="w-full max-w-sm overflow-hidden duration-150 border shadow-2xl bg-neutral-900 border-neutral-800 rounded-2xl animate-in fade-in zoom-in-95">
+            
+            <div className="p-6 space-y-4 text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto text-xl text-red-400 border rounded-full bg-red-500/10 border-red-500/20">
+                👤
+              </div>
+              
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-white">Remover Aluno do Sistema?</h3>
+                <p className="text-xs leading-relaxed text-neutral-400">
+                  Tem a certeza que deseja remover permanentemente o(a) aluno(a) <span className="font-semibold text-red-400">"{deleteModal.name}"</span> do registo? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModal({ open: false, id: null, name: '' })}
+                  className="flex-1 py-2.5 text-xs font-bold tracking-wider uppercase transition-colors bg-neutral-800 text-neutral-400 rounded-xl hover:bg-neutral-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="flex-1 py-2.5 text-xs font-bold tracking-wider uppercase transition-all bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg shadow-red-600/10 cursor-pointer"
+                >
+                  Sim, Remover
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

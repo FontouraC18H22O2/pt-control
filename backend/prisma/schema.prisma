@@ -18,20 +18,18 @@ enum Role {
 
 model UserAdmin {
   id             Int       @id @default(autoincrement())
-  email          String    @unique // Alterado de username para email para o fluxo JWT convencional
-  nome           String    // Nome do utilizador para exibir na Sidebar/Dashboard
+  email          String    @unique
+  nome          String    
   passwordHash   String    @map("password_hash")
-  
-  // 🔥 2. ADICIONADO: Define as permissões do utilizador (Por padrão é PT)
   role           Role      @default(PT)
-
-  createdAt      DateTime  @default(now()) @map("created_at")
+  createdAt      DateTime  @default(now()) @map("created_at") 
   lastLogin      DateTime? @map("last_login")
   failedAttempts Int       @default(0) @map("failed_attempts")
   isActive       Boolean   @default(true) @map("is_active")
+  mustChangePassword Boolean @default(true) @map("must_change_password")
 
   students       Student[]
-
+  exercises          GlobalExercise[]
   @@map("users_admin")
 }
 
@@ -79,15 +77,20 @@ model TrainingExercise {
   @@map("training_exercises")
 }
 
-// 🔥 3. ADICIONADO: Biblioteca Global de Exercícios (Imagens/GIFs)
-// Gerido pelo Admin, lido pelo PT ao criar treinos, consultado pelo Guest.
+// 3. ADICIONADO: Biblioteca Global de Exercícios (Imagens/GIFs)
+
 model GlobalExercise {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // Ex: "Supino Inclinado com Halteres"
-  gifUrl      String?  @map("gif_url") // Guarda o link ou caminho do ficheiro (Ex: "/uploads/supino.gif")
-  category    String   // Ex: "Peito", "Costas", "Pernas"
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          Int        @id @default(autoincrement())
+  name        String     @unique // Ex: "Supino Inclinado com Halteres"
+  gifUrl      String?    @map("gif_url")
+  category    String     // Ex: "Peito", "Costas", "Pernas"
+  
+  // 🔥 ADICIONADO: Ligação opcional com o PT (UserAdmin)
+  userAdminId Int?       @map("user_admin_id")
+  userAdmin   UserAdmin? @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
   @@map("global_exercises")
 }
@@ -116,4 +119,28 @@ model WeightLog {
   student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("weight_logs")
+}
+
+// 🔥 4. ADICIONADO: Registo de Solicitações de Acesso à Plataforma
+// Guarda os pedidos enviados pelo formulário público para gestão do Admin.
+model AccessRequest {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   // Não pomos @unique para permitir que a pessoa tente pedir outra vez se for recusada
+  mensagem  String?  @db.Text
+  status    String   @default("Pendente") // Valores: "Pendente", "Aprovado", "Recusado"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("access_requests")
+}
+
+model VerificationCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("verification_codes") // Mapeia para o nome exato da tabela no MariaDB
 }

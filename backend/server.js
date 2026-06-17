@@ -19,11 +19,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // 2. Middlewares Globais de Segurança e Performance
+// 2. Middlewares Globais de Segurança e Performance
 app.use(helmet({crossOriginResourcePolicy: { policy: "cross-origin" }}));
 
 app.use(cors({
   origin: 'http://localhost:5173', // Porta padrão do React Vite
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));

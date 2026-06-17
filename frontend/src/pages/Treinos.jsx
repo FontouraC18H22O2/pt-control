@@ -41,6 +41,15 @@ export default function Treinos() {
   const [whatsappTexto, setWhatsappTexto] = useState("");
   const [alunoDestino, setAlunoDestino] = useState(null);
 
+  // Estados para edição inline de exercícios na tabela
+  const [indexEditando, setIndexEditando] = useState(null);
+  const [exercicioEditado, setExercicioEditado] = useState({
+    sets: "",
+    reps: "",
+    restTime: "",
+    notes: "",
+  });
+
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -95,43 +104,58 @@ export default function Treinos() {
       setLoading(true);
       const plano = await trainingService.getPlanByStudent(id);
       if (plano) {
-        setSavedPlanId(plano.id);
+        setSavedPlanId(plano.id || null);
         setNotes(plano.notes || "");
-        setExercicios(
-          plano.exercises.map((ex) => ({
+
+        // 🎯 CORREÇÃO: Cruzar o plano com a biblioteca local para nunca perder o GIF URL
+        const exerciciosMapeados = plano.exercises.map((ex) => {
+          // Procura o exercício correspondente na biblioteca pelo nome
+          const exercicioNaBiblioteca = biblioteca.find(
+            (b) =>
+              b.name.toLowerCase().trim() ===
+              ex.exerciseName.toLowerCase().trim(),
+          );
+
+          return {
             id: ex.id,
             exerciseName: ex.exerciseName,
-            gifUrl: ex.gifUrl || null,
+            // Usa o gifUrl que veio do backend ou, como salvaguarda, o da biblioteca local
+            gifUrl: ex.gifUrl || exercicioNaBiblioteca?.gifUrl || "",
             sets: ex.sets,
             reps: ex.reps,
             restTime: ex.restTime,
-            notes: ex.notes,
-          }))
-        );
+            notes: ex.notes || "",
+          };
+        });
+
+        setExercicios(exerciciosMapeados);
       } else {
         setSavedPlanId(null);
         setNotes("");
         setExercicios([]);
       }
       setIsModificado(false);
-    } catch {
+    } catch (err) {
+      console.error(err);
       showMsg("error", "Erro ao carregar o plano deste aluno.");
     } finally {
       setLoading(false);
     }
   };
-
   const showMsg = (type, text) => {
     setMessage({ type, text });
     setTimeout(() => setMessage({ type: "", text: "" }), 4000);
   };
 
   // Sugestões filtradas pelo texto de pesquisa
-  const sugestoes = exerciseSearch.trim().length >= 1
-    ? biblioteca.filter((ex) =>
-        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  const sugestoes =
+    exerciseSearch.trim().length >= 1
+      ? biblioteca
+          .filter((ex) =>
+            ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()),
+          )
+          .slice(0, 8)
+      : [];
 
   const handleSelectExercise = (ex) => {
     setExerciseSelected(ex);
@@ -144,58 +168,94 @@ export default function Treinos() {
     const urlSelecionada = e.target.value;
     if (!urlSelecionada) {
       // Se limpar, remove apenas o vinculo do gif anterior
-      setExerciseSelected(prev => prev ? { ...prev, gifUrl: null } : null);
+      setExerciseSelected((prev) => (prev ? { ...prev, gifUrl: null } : null));
       return;
     }
 
     // Procura o exercício correspondente na biblioteca para herdar os dados completos se necessário
-    const exCorrespondente = biblioteca.find(ex => ex.gifUrl === urlSelecionada);
-    
+    const exCorrespondente = biblioteca.find(
+      (ex) => ex.gifUrl === urlSelecionada,
+    );
+
     if (exCorrespondente) {
       setExerciseSelected({
         id: exCorrespondente.id,
         name: exerciseSelected?.name || exCorrespondente.name,
         gifUrl: exCorrespondente.gifUrl,
-        category: exCorrespondente.category
+        category: exCorrespondente.category,
       });
       // Se o campo de texto estiver vazio, preenche automaticamente com o nome correspondente do GIF
       if (!exerciseSearch.trim()) {
         setExerciseSearch(exCorrespondente.name);
       }
     } else {
-      setExerciseSelected(prev => ({
+      setExerciseSelected((prev) => ({
         ...prev,
-        gifUrl: urlSelecionada
+        gifUrl: urlSelecionada,
       }));
     }
   };
 
   const handleAddExercicio = (e) => {
-  e.preventDefault(); // ✅ Correto! Agora o formulário não recarrega e executa o resto.
-  const nome = exerciseSelected?.name || exerciseSearch.trim();
-  if (!nome) return;
+    e.preventDefault(); // ✅ Correto! Agora o formulário não recarrega e executa o resto.
+    const nome = exerciseSelected?.name || exerciseSearch.trim();
+    if (!nome) return;
 
-  const novoEx = {
-    exerciseName: nome,
-    gifUrl: exerciseSelected?.gifUrl || null,
-    sets: parseInt(sets) || 4,
-    reps: parseInt(reps) || 10,
-    restTime: restTime.trim() || "60s",
-    notes: exNotes.trim(),
+    const novoEx = {
+      exerciseName: nome,
+      gifUrl: exerciseSelected?.gifUrl || null,
+      sets: parseInt(sets) || 4,
+      reps: parseInt(reps) || 10,
+      restTime: restTime.trim() || "60s",
+      notes: exNotes.trim(),
+    };
+
+    setExercicios([...exercicios, novoEx]);
+    setIsModificado(true);
+    setExerciseSearch("");
+    setExerciseSelected(null);
+    setExNotes("");
   };
-
-  setExercicios([...exercicios, novoEx]);
-  setIsModificado(true);
-  setExerciseSearch("");
-  setExerciseSelected(null);
-  setExNotes("");
-};
 
   const handleRemoveExercicioLocal = (indexParaRemover) => {
     setExercicios(exercicios.filter((_, idx) => idx !== indexParaRemover));
     setIsModificado(true);
   };
+  // Ativa o modo de edição para uma linha específica, carregando os dados atuais
+  const handleIniciarEdicao = (index, ex) => {
+    setIndexEditando(index);
+    setExercicioEditado({
+      sets: ex.sets,
+      reps: ex.reps,
+      restTime: ex.restTime,
+      notes: ex.notes || "",
+    });
+  };
 
+  // Atualiza o estado temporário enquanto o utilizador digita nos campos de edição
+  const handleMudancaEdicao = (campo, valor) => {
+    setExercicioEditado((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
+  // Grava as alterações feitas de volta no array de exercícios do estado global
+  const handleSalvarEdicao = (index) => {
+    const novosExercicios = [...exercicios];
+
+    novosExercicios[index] = {
+      ...novosExercicios[index],
+      sets: parseInt(exercicioEditado.sets) || 4,
+      reps: parseInt(exercicioEditado.reps) || 10,
+      restTime: exercicioEditado.restTime.trim() || "60s",
+      notes: exercicioEditado.notes.trim(),
+    };
+
+    setExercicios(novosExercicios);
+    setIsModificado(true); // Ativa o botão de Sync com o MySQL
+    setIndexEditando(null); // Fecha o modo de edição da linha
+  };
   const limparFormularioCompleto = () => {
     setNotes("");
     setExercicios([]);
@@ -219,7 +279,10 @@ export default function Treinos() {
       const resultado = await trainingService.saveTrainingPlan(payload);
       setSavedPlanId(resultado.plan?.id || null);
       await carregarPlanoAluno(alunoSelecionadoId);
-      showMsg("success", "Plano de treino atualizado e sincronizado no MySQL com sucesso!");
+      showMsg(
+        "success",
+        "Plano de treino atualizado e sincronizado no MySQL com sucesso!",
+      );
     } catch (err) {
       showMsg("error", err);
     } finally {
@@ -240,7 +303,7 @@ export default function Treinos() {
       aluno.nome,
       exercicios,
       notes,
-      savedPlanId
+      savedPlanId,
     );
     setWhatsappTexto(textoMapeado);
     setIsPreviewOpen(true);
@@ -254,7 +317,8 @@ export default function Treinos() {
           Prescrever Treinos
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Selecione um aluno ativo e monte a sua rotina de exercícios personalizada.
+          Selecione um aluno ativo e monte a sua rotina de exercícios
+          personalizada.
         </p>
       </div>
 
@@ -281,7 +345,9 @@ export default function Treinos() {
           onChange={(e) => setAlunoSelecionadoId(e.target.value)}
           className="w-full max-w-md px-4 py-3 text-sm text-white transition-colors border outline-none cursor-pointer bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym"
         >
-          <option value="">Escolha um aluno na lista para gerir o treino...</option>
+          <option value="">
+            Escolha um aluno na lista para gerir o treino...
+          </option>
           {alunos.map((aluno) => (
             <option key={aluno.id} value={aluno.id}>
               {aluno.nome} ({aluno.whatsapp})
@@ -298,7 +364,6 @@ export default function Treinos() {
               ➕ Adicionar Exercício
             </h2>
             <form onSubmit={handleAddExercicio} className="space-y-4">
-
               {/* Campo de pesquisa com autocomplete + preview do GIF */}
               <div className="space-y-1" ref={dropdownRef}>
                 <label className="text-xs text-neutral-400">
@@ -318,7 +383,8 @@ export default function Treinos() {
                       setShowDropdown(true);
                     }}
                     onFocus={() => {
-                      if (exerciseSearch.trim().length >= 1) setShowDropdown(true);
+                      if (exerciseSearch.trim().length >= 1)
+                        setShowDropdown(true);
                     }}
                     className="w-full px-3 py-2 text-sm text-white border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym"
                     required
@@ -339,7 +405,9 @@ export default function Treinos() {
                               src={`${BACKEND_URL}${ex.gifUrl}`}
                               alt={ex.name}
                               className="flex-shrink-0 object-cover w-10 h-10 border rounded-lg border-neutral-700"
-                              onError={(e) => { e.target.style.display = "none"; }}
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
                             />
                           ) : (
                             <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 text-xs border rounded-lg border-neutral-800 bg-neutral-950 text-neutral-600">
@@ -347,8 +415,12 @@ export default function Treinos() {
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{ex.name}</p>
-                            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">{ex.category}</p>
+                            <p className="text-sm font-semibold text-white truncate">
+                              {ex.name}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">
+                              {ex.category}
+                            </p>
                           </div>
                         </li>
                       ))}
@@ -359,7 +431,9 @@ export default function Treinos() {
 
               {/* 🟢 NOVO: Dropdown para buscar/associar os GIFs diretamente da DB */}
               <div className="space-y-1">
-                <label className="text-xs text-neutral-400">Animação / GIF de Suporte</label>
+                <label className="text-xs text-neutral-400">
+                  Animação / GIF de Suporte
+                </label>
                 <select
                   value={exerciseSelected?.gifUrl || ""}
                   onChange={handleSelectGifDropdown}
@@ -367,7 +441,7 @@ export default function Treinos() {
                 >
                   <option value="">-- Sem Animação Associada --</option>
                   {biblioteca
-                    .filter(ex => ex.gifUrl) // Garante que só lista quem tem GIF populado
+                    .filter((ex) => ex.gifUrl) // Garante que só lista quem tem GIF populado
                     .map((ex) => (
                       <option key={`gif-opt-${ex.id}`} value={ex.gifUrl}>
                         {ex.name} ({ex.category || "Geral"})
@@ -385,11 +459,17 @@ export default function Treinos() {
                     className="flex-shrink-0 object-cover w-16 h-16 border rounded-lg border-neutral-800"
                   />
                   <div>
-                    <p className="text-xs font-bold text-white">{exerciseSelected.name}</p>
+                    <p className="text-xs font-bold text-white">
+                      {exerciseSelected.name}
+                    </p>
                     {exerciseSelected.category && (
-                      <p className="text-[10px] text-neutral-500 uppercase mt-0.5">{exerciseSelected.category}</p>
+                      <p className="text-[10px] text-neutral-500 uppercase mt-0.5">
+                        {exerciseSelected.category}
+                      </p>
                     )}
-                    <span className="text-[10px] text-emerald-400">✔ GIF Vinculado</span>
+                    <span className="text-[10px] text-emerald-400">
+                      ✔ GIF Vinculado
+                    </span>
                   </div>
                 </div>
               )}
@@ -425,7 +505,9 @@ export default function Treinos() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs text-neutral-400">Notas / Instruções Técnicas</label>
+                <label className="text-xs text-neutral-400">
+                  Notas / Instruções Técnicas
+                </label>
                 <textarea
                   placeholder="Ex: Carga progressiva, cadência 3-1-1..."
                   rows="2"
@@ -470,7 +552,10 @@ export default function Treinos() {
                       type="text"
                       placeholder="Ex: Foco em hipertrofia - Progressão de carga na última série."
                       value={notes}
-                      onChange={(e) => { setNotes(e.target.value); setIsModificado(true); }}
+                      onChange={(e) => {
+                        setNotes(e.target.value);
+                        setIsModificado(true);
+                      }}
                       className="w-full px-4 py-3 text-sm text-white border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym placeholder-neutral-600"
                     />
                   </div>
@@ -490,57 +575,190 @@ export default function Treinos() {
                       </thead>
                       <tbody className="divide-y divide-neutral-800 text-neutral-300">
                         {exercicios.length > 0 ? (
-                          exercicios.map((ex, index) => (
-                            <tr key={index} className="transition-colors hover:bg-neutral-900/40">
-                              <td className="p-3">
-                                {ex.gifUrl ? (
-                                  <img
-                                    src={`${BACKEND_URL}${ex.gifUrl}`}
-                                    alt={ex.exerciseName}
-                                    className="object-cover w-12 h-12 border rounded-lg border-neutral-800"
-                                    onError={(e) => { e.target.style.display = "none"; }}
-                                  />
-                                ) : (
-                                  <div className="flex items-center justify-center w-12 h-12 text-xs border rounded-lg border-neutral-800 bg-neutral-900 text-neutral-600">
-                                    —
+                          exercicios.map((ex, index) => {
+                            const estaEditando = indexEditando === index;
+
+                            return (
+                              <tr
+                                key={index}
+                                className="transition-colors hover:bg-neutral-900/40"
+                              >
+                                {/* Coluna GIF - Centralizada */}
+                                <td className="w-20 p-3 text-center">
+                                  <div className="flex justify-center">
+                                    {ex.gifUrl ? (
+                                      <img
+                                        src={`${BACKEND_URL}${ex.gifUrl}`}
+                                        alt={ex.exerciseName}
+                                        className="object-cover w-12 h-12 border rounded-lg border-neutral-800"
+                                        onError={(e) => {
+                                          e.target.style.display = "none";
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="flex items-center justify-center w-12 h-12 text-xs border rounded-lg border-neutral-800 bg-neutral-900 text-neutral-600">
+                                        —
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </td>
-                              <td className="p-3 font-semibold text-white">{ex.exerciseName}</td>
-                              <td className="p-3 font-mono text-center">{ex.sets}</td>
-                              <td className="p-3 font-mono text-center">{ex.reps}</td>
-                              <td className="p-3 font-mono text-center text-neutral-400">{ex.restTime}</td>
-                              <td className="p-3 text-xs text-neutral-400 max-w-[120px] truncate" title={ex.notes}>
-                                {ex.notes || "—"}
-                              </td>
-                              <td className="p-3 text-right">
-                                <div className="flex items-center justify-end gap-3">
-                                  <button
-                                    onClick={() => handleOpenWeights(ex.exerciseName)}
-                                    disabled={isModificado}
-                                    className={`text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
-                                      isModificado
-                                        ? "text-neutral-600 cursor-not-allowed opacity-40"
-                                        : "text-fitnessGym hover:text-emerald-400"
-                                    }`}
-                                    title={isModificado ? "Sincronize primeiro" : "Registar/Ver Cargas"}
-                                  >
-                                    📈 Cargas
-                                  </button>
-                                  <button
-                                    onClick={() => handleRemoveExercicioLocal(index)}
-                                    className="text-xs font-medium text-red-400 transition-colors cursor-pointer hover:text-red-500"
-                                  >
-                                    Remover
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                                </td>
+
+                                {/* Coluna Exercício - Alinhada à esquerda com espaçamento correto */}
+                                <td className="p-3 pl-4 font-semibold text-left text-white">
+                                  {ex.exerciseName}
+                                </td>
+
+                                {/* Coluna Séries - Centralizada */}
+                                <td className="p-3 font-mono text-center">
+                                  {estaEditando ? (
+                                    <input
+                                      type="number"
+                                      value={exercicioEditado.sets}
+                                      onChange={(e) =>
+                                        handleMudancaEdicao(
+                                          "sets",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-16 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500"
+                                    />
+                                  ) : (
+                                    ex.sets
+                                  )}
+                                </td>
+
+                                {/* Coluna Repetições - Centralizada */}
+                                <td className="p-3 font-mono text-center">
+                                  {estaEditando ? (
+                                    <input
+                                      type="number"
+                                      value={exercicioEditado.reps}
+                                      onChange={(e) =>
+                                        handleMudancaEdicao(
+                                          "reps",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-16 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500"
+                                    />
+                                  ) : (
+                                    ex.reps
+                                  )}
+                                </td>
+
+                                {/* Coluna Descanso - Centralizada */}
+                                <td className="p-3 font-mono text-center text-neutral-400">
+                                  {estaEditando ? (
+                                    <input
+                                      type="text"
+                                      value={exercicioEditado.restTime}
+                                      onChange={(e) =>
+                                        handleMudancaEdicao(
+                                          "restTime",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-20 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500"
+                                    />
+                                  ) : (
+                                    ex.restTime
+                                  )}
+                                </td>
+
+                                {/* Coluna Notas */}
+                                <td className="p-3 text-xs text-neutral-400 max-w-[120px] truncate">
+                                  {estaEditando ? (
+                                    <input
+                                      type="text"
+                                      value={exercicioEditado.notes}
+                                      onChange={(e) =>
+                                        handleMudancaEdicao(
+                                          "notes",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-full px-2 py-1 text-xs text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500"
+                                    />
+                                  ) : (
+                                    ex.notes || "—"
+                                  )}
+                                </td>
+
+                                {/* Coluna Ações */}
+                                <td className="p-3 text-right">
+                                  <div className="flex items-center justify-end gap-3">
+                                    {estaEditando ? (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            handleSalvarEdicao(index)
+                                          }
+                                          className="text-xs font-bold cursor-pointer text-emerald-400 hover:text-emerald-300"
+                                        >
+                                          Gravar
+                                        </button>
+                                        <button
+                                          onClick={() => setIndexEditando(null)}
+                                          className="text-xs font-medium cursor-pointer text-neutral-500 hover:text-neutral-400"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            handleIniciarEdicao(index, ex)
+                                          }
+                                          className="flex items-center gap-1 text-xs transition-colors cursor-pointer text-neutral-400 hover:text-white"
+                                        >
+                                          ✏️ Editar
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleOpenWeights(ex.exerciseName)
+                                          }
+                                          disabled={
+                                            isModificado ||
+                                            indexEditando !== null
+                                          }
+                                          className={`text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                                            isModificado ||
+                                            indexEditando !== null
+                                              ? "text-neutral-600 cursor-not-allowed opacity-40"
+                                              : "text-fitnessGym hover:text-emerald-400"
+                                          }`}
+                                          title={
+                                            isModificado
+                                              ? "Sincronize primeiro"
+                                              : "Registar/Ver Cargas"
+                                          }
+                                        >
+                                          📈 Cargas
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleRemoveExercicioLocal(index)
+                                          }
+                                          className="text-xs font-medium text-red-400 transition-colors cursor-pointer hover:text-red-500"
+                                        >
+                                          Remover
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
                         ) : (
                           <tr>
-                            <td colSpan="7" className="p-6 text-xs italic text-center text-neutral-600">
-                              Nenhum exercício adicionado. Comece a injetar no painel lateral.
+                            <td
+                              colSpan="7"
+                              className="p-6 text-xs italic text-center text-neutral-600"
+                            >
+                              Nenhum exercício adicionado. Comece a injetar no
+                              painel lateral.
                             </td>
                           </tr>
                         )}
@@ -551,12 +769,26 @@ export default function Treinos() {
                   <div className="flex justify-end gap-3 pt-2">
                     <button
                       onClick={handleAbrirPreviewWhatsApp}
-                      disabled={exercicios.length === 0 || isModificado || !alunoSelecionadoId}
+                      disabled={
+                        exercicios.length === 0 ||
+                        isModificado ||
+                        !alunoSelecionadoId
+                      }
                       className="px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-sm transition-colors cursor-pointer border border-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                      title={isModificado ? "Grave as alterações primeiro" : "Visualizar e Enviar por WhatsApp"}
+                      title={
+                        isModificado
+                          ? "Grave as alterações primeiro"
+                          : "Visualizar e Enviar por WhatsApp"
+                      }
                     >
-                      <img src="/whatsapp.png" alt="WhatsApp" className="object-contain w-5 h-5" />
-                      {isModificado ? "Grave para Ativar" : "Enviar para o WhatsApp"}
+                      <img
+                        src="/whatsapp.png"
+                        alt="WhatsApp"
+                        className="object-contain w-5 h-5"
+                      />
+                      {isModificado
+                        ? "Grave para Ativar"
+                        : "Enviar para o WhatsApp"}
                     </button>
 
                     <button
@@ -609,7 +841,11 @@ export default function Treinos() {
                   {whatsappTexto}
                 </pre>
                 <div className="text-[10px] text-[#8696a0] text-right mt-1 font-mono">
-                  {new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} ✔✔
+                  {new Date().toLocaleTimeString("pt-PT", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}{" "}
+                  ✔✔
                 </div>
               </div>
             </div>
@@ -628,14 +864,14 @@ export default function Treinos() {
                     alunoDestino.nome,
                     exercicios,
                     notes,
-                    savedPlanId
+                    savedPlanId,
                   );
                   if (url) window.open(url, "_blank");
                   setIsPreviewOpen(false);
                 }}
                 className="w-full py-2.5 text-xs font-black uppercase tracking-wider bg-fitnessGym text-white hover:bg-red-700 rounded-xl shadow-lg shadow-red-500/20 transition-all cursor-pointer"
               >
-                 Enviar
+                Enviar
               </button>
             </div>
           </div>

@@ -3,16 +3,14 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Sidebar() {
-  // 🔥 ATUALIZADO: Extraímos também o 'role' exposto globalmente pelo teu AuthContext
-  const { logout, user, role } = useAuth(); 
+  const { logout, user, role } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate("/"); // Expulsa o utilizador para o ecrã de login
+    navigate("/");
   };
 
-  // Classes de estilo para os links (destaca o link ativo com a cor do teu ginásio)
   const linkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group ${
       isActive
@@ -20,35 +18,31 @@ export default function Sidebar() {
         : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
     }`;
 
-  // 🔥 NOVO: Verifica se o utilizador atual é um convidado
-  const isGuest = role === 'GUEST';
+  const isGuest = role === "GUEST";
+  const isAdmin = role === "ADMIN";
 
   return (
     <aside className="sticky top-0 flex flex-col justify-between w-64 h-screen p-4 border-r bg-neutral-900 border-neutral-800 shrink-0">
-      {/* Bloco Superior: Logo e Navegação */}
       <div className="space-y-8">
-        {/* Logo Brand e Nome do PT / Guest */}
+        {/* Bloco Superior: Logo e Identificação */}
         <div className="px-2 py-4 space-y-2 text-center border-b border-neutral-800">
           <h1 className="text-xl font-bold tracking-tight text-white">
             PT <span className="text-fitnessGym">Control</span>
           </h1>
-          {/* Caixa Dinâmica para mostrar o nome e o cargo do Utilizador Logado */}
           {user && user.nome && (
             <div className="text-xs text-neutral-400 font-medium bg-neutral-950/50 py-1.5 px-2 rounded-lg border border-neutral-800/40 space-y-0.5">
               <p className="truncate text-neutral-500">
-                Acesso: <span className="font-bold text-fitnessGym">{role}</span>
+                Acesso:{" "}
+                <span className="font-bold text-fitnessGym">{role}</span>
               </p>
-              <p className="font-semibold text-white truncate">
-                {user.nome}
-              </p>
+              <p className="font-semibold text-white truncate">{user.nome}</p>
             </div>
           )}
         </div>
 
-        {/* Menu de Links Filtrado dinamicamente por Cargo */}
+        {/* Menu de Links Condicional */}
         <nav className="space-y-2">
-          
-          {/* 1. Visão Geral / Dashboard (Escondido para o Guest, visível para PT/ADMIN) */}
+          {/* 1. Visão Geral (Dashboard) - Visível para ADMIN e PT */}
           {!isGuest && (
             <NavLink to="/dashboard" end className={linkClass}>
               <svg
@@ -69,8 +63,50 @@ export default function Sidebar() {
             </NavLink>
           )}
 
-          {/* 2. Gerir Alunos (Escondido para o Guest, visível para PT/ADMIN) */}
-          {!isGuest && (
+          {/* 2. Gestão de Personal Trainers - Exclusivo para ADMIN */}
+          {isAdmin && (
+            <>
+              <NavLink to="/dashboard/personal-trainers" className={linkClass}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>Personal Trainers</span>
+              </NavLink>
+
+              {/* Link para Pedidos de Acesso Pendentes */}
+              <NavLink to="/dashboard/pedidos-acesso" className={linkClass}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+                <span>Pedidos de Acesso</span>
+              </NavLink>
+            </>
+          )}
+
+          {/* 3. Gerir Alunos - Apenas para PT */}
+          {!isGuest && !isAdmin && (
             <NavLink to="/dashboard/alunos" className={linkClass}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -90,8 +126,8 @@ export default function Sidebar() {
             </NavLink>
           )}
 
-          {/* 3. Planos de Treino (Escondido para o Guest, visível para PT/ADMIN) */}
-          {!isGuest && (
+          {/* 4. Planos de Treino - Apenas para PT */}
+          {!isGuest && !isAdmin && (
             <NavLink to="/dashboard/treinos" className={linkClass}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -111,8 +147,29 @@ export default function Sidebar() {
             </NavLink>
           )}
 
-          {/* 🔥 4. Galeria de Exercícios (Única opção visível para o GUEST, e também acessível a PT/ADMIN) */}
-          <NavLink to="/dashboard/galeria" className={linkClass}>
+          {/* 5. Galeria de Exercícios - PT e GUEST */}
+          {!isAdmin && (
+            <NavLink to="/dashboard/galeria" className={linkClass}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"
+                />
+              </svg>
+              <span>Galeria de Exercícios</span>
+            </NavLink>
+          )}
+
+          {/* 🔥 NOVO: O meu Perfil - Visível para TODOS os utilizadores ligados */}
+          <NavLink to="/dashboard/perfil" className={linkClass}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-5 h-5"
@@ -124,16 +181,15 @@ export default function Sidebar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            <span>Galeria de Exercícios</span>
+            <span>O meu Perfil</span>
           </NavLink>
-
         </nav>
       </div>
 
-      {/* Bloco Inferior: Botão de Logout */}
+      {/* Botão de Logout */}
       <div className="pt-4 border-t border-neutral-800">
         <button
           onClick={handleLogout}

@@ -4,7 +4,7 @@ const { PrismaMariaDb } = require('@prisma/adapter-mariadb');
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL);
 const prisma = new PrismaClient({ adapter });
 
-// 1. Procurar o plano de treino ativo de um aluno (com os seus exercícios)
+// 1. Procurar o plano de treino ativo de um aluno (com os seus exercícios e GIFs)
 const getPlanByStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -34,13 +34,37 @@ const getPlanByStudent = async (req, res) => {
     });
 
     if (!trainingPlan) {
-      return res.status(200).json(null); // Retorna null se o aluno ainda não tiver plano
+      return res.status(200).json(null);
     }
 
-    return res.status(200).json(trainingPlan);
+    // 🎯 NOVO: Procurar os GIFs correspondentes na biblioteca global globalExercise
+    const dbExercises = await prisma.globalExercise.findMany({
+      where: {
+        name: { in: trainingPlan.exercises.map(e => e.exerciseName) }
+      },
+      select: { name: true, gifUrl: true }
+    });
+
+    // Criar um mapa simples para agilizar a colagem do link
+    const exerciseMap = {};
+    dbExercises.forEach(ex => {
+      exerciseMap[ex.name.toLowerCase().trim()] = ex.gifUrl;
+    });
+
+    // Injetar o gifUrl em cada exercício devolvido para a tabela do Frontend
+    const exercisesWithGifs = trainingPlan.exercises.map(ex => ({
+      ...ex,
+      gifUrl: exerciseMap[ex.exerciseName.toLowerCase().trim()] || null
+    }));
+
+    return res.status(200).json({
+      ...trainingPlan,
+      exercises: exercisesWithGifs
+    });
+
   } catch (error) {
-    console.error('❌ Erro ao procurar plano de treino:', error);
-    return res.status(500).json({ error: 'Erro interno ao carregar plano de treino.' });
+    console.error('❌ Erro ao buscar plano por estudante:', error);
+    return res.status(500).json({ error: 'Erro interno ao carregar o plano de treino.' });
   }
 };
 

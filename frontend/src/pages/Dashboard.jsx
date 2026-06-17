@@ -1,195 +1,141 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import dashboardService from "../services/dashboardService";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { getTrainerMetrics } from '../services/adminService'; // 🔥 Importa a nova função do serviço
 
 export default function Dashboard() {
+  const { user, role } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    activeStudents: 0,
-    inactiveStudents: 0,
-    totalPlans: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // Carregar os dados reais do MySQL assim que o ecrã abre
+  const isAdmin = role === 'ADMIN';
+
+  // 🔥 NOVO: Estados para controlar os dados reais do PT e o estado de loading
+  const [metrics, setMetrics] = useState({ totalAlunos: 0, totalPlanos: 0, totalExercicios: 0 });
+  const [loadingMetrics, setLoadingMetrics] = useState(!isAdmin); // Só faz loading se não for admin
+
+  // 🔥 NOVO: Procura as métricas na BD se o utilizador for um PT
   useEffect(() => {
-    const carregarMetricas = async () => {
-      try {
-        setLoading(true);
-        const dados = await dashboardService.getStats();
-        setStats(dados);
-      } catch (err) {
-        setError(
-          "Não foi possível sincronizar os dados do Dashboard em tempo real.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!isAdmin) {
+      const carregarMetricas = async () => {
+        try {
+          const dados = await getTrainerMetrics();
+          setMetrics(dados);
+        } catch (err) {
+          console.error('Erro ao popular dashboard do PT:', err);
+        } finally {
+          setLoadingMetrics(false);
+        }
+      };
+      carregarMetricas();
+    }
+  }, [isAdmin]);
 
-    carregarMetricas();
-  }, []);
-
-  // Cálculo da percentagem de retenção/atividade de alunos
-  const taxaAtividade =
-    stats.totalStudents > 0
-      ? Math.round((stats.activeStudents / stats.totalStudents) * 100)
-      : 0;
-
-  if (loading) {
+  // ==========================================
+  // 👑 CASO 1: PAINEL DE CONTROLO EXCLUSIVO DO ADMIN
+  // ==========================================
+  if (isAdmin) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-neutral-400 text-sm">
-        <div className="space-y-2 text-center">
-          <div className="text-2xl animate-spin">🔄</div>
-          <p>A calcular métricas e estatísticas do ginásio...</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight">Painel de Controlo Segurança</h1>
+          <p className="text-sm text-neutral-400">
+            Olá, <span className="font-semibold text-white">{user?.nome}</span>. Bem-vindo à consola central de administração global.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="p-5 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
+            <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Controlo de Acessos</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-white">Ativos</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+            <p className="text-xs text-neutral-400">Base de dados MariaDB operacional.</p>
+          </div>
+
+          <div className="p-5 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
+            <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Serviço de Notificações</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-red-500">SMTP</span>
+            </div>
+            <p className="text-xs text-neutral-400">Disparos de e-mails automáticos ativos.</p>
+          </div>
+
+          <div className="p-5 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
+            <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Nível de Segurança</p>
+            <span className="text-3xl font-black text-blue-400">JWT + RBAC</span>
+            <p className="text-xs text-neutral-400">Tokens de autenticação encriptados.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="p-6 space-y-4 border lg:col-span-1 bg-neutral-900 border-neutral-800 rounded-2xl">
+            <h3 className="text-base font-bold text-white">Ações Administrativas</h3>
+            <p className="text-xs leading-relaxed text-neutral-400">
+              Como administrador, as tuas funções estão restritas à criação, auditoria e revogação de acessos na plataforma fitness.
+            </p>
+            <button
+              onClick={() => navigate('/dashboard/personal-trainers')}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-colors text-sm cursor-pointer shadow-lg shadow-red-500/10"
+            >
+              Ir para Gestão de PTs
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4 border lg:col-span-2 bg-neutral-900 border-neutral-800 rounded-2xl">
+            <h3 className="text-base font-bold text-white">Histórico Recente do Servidor</h3>
+            <div className="space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between p-3 border bg-neutral-950 rounded-xl border-neutral-800/60">
+                <span className="text-emerald-400">[SUCCESS] Token verificado via authMiddleware</span>
+                <span className="text-neutral-500">Agora mesmo</span>
+              </div>
+              <div className="flex items-center justify-between p-3 border bg-neutral-950 rounded-xl border-neutral-800/60">
+                <span className="text-neutral-300">[EMAIL] Notificação de registo enviada com sucesso</span>
+                <span className="text-neutral-500">Há 5 min</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ==========================================
+  // 💪 CASO 2: PAINEL DO PT (MANTIDO IGUAL, AGORA COM DADOS REAIS)
+  // ==========================================
   return (
-    <div className="space-y-8">
-      {/* Bloco de Boas-Vindas */}
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
-          Painel de Controlo
-        </h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Bem-vindo de volta! Aqui está o resumo operacional e de retenção dos
-          teus alunos.
+        <h1 className="text-2xl font-black tracking-tight">Painel do Treinador</h1>
+        <p className="text-sm text-neutral-400">
+          Olá, <span className="font-semibold text-white">{user?.nome}</span>. Visualiza o resumo das tuas atividades desportivas e alunos.
         </p>
       </div>
 
-      {error && (
-        <div className="p-4 text-sm text-red-400 border bg-red-500/10 border-red-500/20 rounded-2xl">
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Grid de Cartões de Métricas */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Total de Alunos */}
-        <div className="p-6 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
-          <div className="text-xs font-semibold tracking-wider uppercase text-neutral-400">
-            Total de Atletas
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-4xl font-extrabold text-white">
-              {stats.totalStudents}
-            </span>
-            <span className="text-lg">👥</span>
-          </div>
-          <p className="text-xs text-neutral-500">Registados globalmente</p>
-        </div>
-
-        {/* Card 2: Alunos Ativos */}
-        <div className="p-6 space-y-2 border border-l-4 bg-neutral-900 border-neutral-800 rounded-2xl border-l-fitnessGym">
-          <div className="text-xs font-semibold tracking-wider uppercase text-neutral-400">
-            Atletas Ativos
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-4xl font-extrabold text-fitnessGym">
-              {stats.activeStudents}
-            </span>
-            <span className="text-lg">🟢</span>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Com acesso ativo ao ginásio
+      {/* Cartões do PT alimentados pelo estado assíncrono */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="p-5 border bg-neutral-900 border-neutral-800 rounded-2xl">
+          <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Os Meus Alunos</p>
+          <p className="mt-1 text-3xl font-black text-white">
+            {loadingMetrics ? <span className="text-sm font-normal text-neutral-500">A carregar...</span> : metrics.totalAlunos}
           </p>
         </div>
-
-        {/* Card 3: Alunos Inativos */}
-        <div className="p-6 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
-          <div className="text-xs font-semibold tracking-wider uppercase text-neutral-400">
-            Atletas Inativos
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-4xl font-extrabold text-neutral-400">
-              {stats.inactiveStudents}
-            </span>
-            <span className="text-lg">🔴</span>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Subscrição ou treino suspenso
+        <div className="p-5 border bg-neutral-900 border-neutral-800 rounded-2xl">
+          <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Planos Ativos</p>
+          <p className="mt-1 text-3xl font-black text-white">
+            {loadingMetrics ? <span className="text-sm font-normal text-neutral-500">A carregar...</span> : metrics.totalPlanos}
           </p>
         </div>
-
-        {/* Card 4: Fichas de Treino */}
-        <div className="p-6 space-y-2 border bg-neutral-900 border-neutral-800 rounded-2xl">
-          <div className="text-xs font-semibold tracking-wider uppercase text-neutral-400">
-            Fichas de Treino
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-4xl font-extrabold text-white">
-              {stats.totalPlans}
-            </span>
-            <span className="text-lg">🏋️‍♂️</span>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Rotinas montadas no sistema
+        <div className="p-5 border bg-neutral-900 border-neutral-800 rounded-2xl">
+          <p className="text-xs font-semibold tracking-wider uppercase text-neutral-500">Exercícios na Galeria</p>
+          <p className="mt-1 text-3xl font-black text-white">
+            {loadingMetrics ? <span className="text-sm font-normal text-neutral-500">A carregar...</span> : metrics.totalExercicios}
           </p>
         </div>
       </div>
 
-      {/* Secção Intermédia: Taxa de Saúde Operacional */}
-      <div className="grid items-center grid-cols-1 gap-6 p-6 border bg-neutral-900 border-neutral-800 rounded-2xl md:grid-cols-3">
-        <div className="space-y-2 md:col-span-2">
-          <h2 className="text-lg font-bold text-white">
-            Taxa de Ocupação Ativa
-          </h2>
-          <p className="text-sm text-neutral-400">
-            Esta métrica representa a percentagem de alunos matriculados que
-            estão a treinar ativamente sob a tua tutela neste momento. Mantém
-            este valor acima dos 80% para garantir uma boa taxa de retenção!
-          </p>
-        </div>
-        <div className="p-4 text-center border bg-neutral-950 rounded-xl border-neutral-800">
-          <div className="mb-1 font-mono text-5xl font-black text-fitnessGym">
-            {taxaAtividade}%
-          </div>
-          <div className="text-xs font-bold tracking-widest uppercase text-neutral-500">
-            Alunos Alistrados
-          </div>
-        </div>
-      </div>
-
-      {/* Painel Inferior: Atalhos de Ação Rápida */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold tracking-wider uppercase text-neutral-400">
-          Ações Operacionais Rápidas
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <button
-            onClick={() => navigate("/dashboard/alunos")} // 👈 Atualizado para o caminho aninhado correto
-            className="p-4 space-y-1 text-left text-white transition-all border cursor-pointer bg-neutral-950 hover:bg-neutral-900 border-neutral-800 hover:border-neutral-700 rounded-xl"
-          >
-            <div className="text-sm font-bold">➕ Matricular Atleta</div>
-            <div className="text-xs text-neutral-500">
-              Adicionar novos alunos à base de dados.
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/treinos")} // 👈 Atualizado para o caminho aninhado correto
-            className="p-4 space-y-1 text-left text-white transition-all border cursor-pointer bg-neutral-950 hover:bg-neutral-900 border-neutral-800 hover:border-neutral-700 rounded-xl"
-          >
-            <div className="text-sm font-bold">📝 Prescrever Nova Rotina</div>
-            <div className="text-xs text-neutral-500">
-              Montar ou alterar fichas de exercício.
-            </div>
-          </button>
-
-          <div className="p-4 space-y-1 border bg-neutral-900/30 border-neutral-800 text-neutral-400 rounded-xl opacity-60">
-            <div className="text-sm font-bold text-neutral-500">
-              📊 Relatórios Financeiros
-            </div>
-            <div className="text-xs text-neutral-600">
-              Brevemente (Módulo de Faturação).
-            </div>
-          </div>
-        </div>
+      <div className="p-10 text-sm text-center border border-dashed border-neutral-800 rounded-2xl text-neutral-500 bg-neutral-900/20">
+        🗂️ Seleciona uma das opções na barra lateral para começar a trabalhar.
       </div>
     </div>
   );

@@ -1,15 +1,18 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Alunos from './pages/Alunos'; 
-import Treinos from './pages/Treinos'; 
-import Galeria from './pages/Galeria'; 
-import VisualizarTreino from './pages/VisualizarTreino';
-import ProtectedRoute from './components/ProtectedRoute';
-import DashboardLayout from './components/DashboardLayout'; 
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import Alunos from "./pages/Alunos";
+import Treinos from "./pages/Treinos";
+import Galeria from "./pages/Galeria";
+import GestaoPTs from "./pages/GestaoPTs";
+import VisualizarTreino from "./pages/VisualizarTreino";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardLayout from "./components/DashboardLayout";
+import AccessRequests from "./pages/AccessRequests";
+import Perfil from "./pages/Perfil"; // 🔥 1. IMPORTAR A PÁGINA DE PERFIL
 
 function App() {
   return (
@@ -20,45 +23,74 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/meutreino/:planId" element={<VisualizarTreino />} />
 
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'PT', 'GUEST']}>
+              <ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route 
-              index 
+            <Route
+              index
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PT']}>
+                <ProtectedRoute allowedRoles={["ADMIN", "PT"]}>
                   <Dashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="alunos" 
+
+            <Route
+              path="personal-trainers"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PT']}>
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <GestaoPTs />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="pedidos-acesso"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <AccessRequests />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="alunos"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN", "PT"]}>
                   <Alunos />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="treinos" 
+            <Route
+              path="treinos"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PT']}>
+                <ProtectedRoute allowedRoles={["ADMIN", "PT"]}>
                   <Treinos />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="galeria" 
+            <Route
+              path="galeria"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PT', 'GUEST']}>
+                <ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}>
                   <Galeria />
                 </ProtectedRoute>
-              } 
+              }
+            />
+
+            {/* 🔥 2. ADICIONAR A ROTA DO PERFIL AQUI (Disponível para ADMIN, PT e GUEST) */}
+            <Route
+              path="perfil"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}>
+                  <Perfil />
+                </ProtectedRoute>
+              }
             />
           </Route>
 
