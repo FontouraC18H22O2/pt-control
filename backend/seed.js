@@ -1,55 +1,32 @@
-require('dotenv').config();
+cat << 'EOF' > seed.js
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
-// 🔥 Limpo e sem adaptadores manuais para funcionar perfeitamente na Cloud!
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🔄 A preparar a criação do PT de teste no Railway...');
-
-  const nomePT = 'admin';
-  const emailPT = 'admin@gym.com'; 
-  const passwordCrua = 'Admin@257-05'; 
-
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(passwordCrua, saltRounds);
-
-  // Verificar se o admin já existe
-  const adminExiste = await prisma.userAdmin.findUnique({
-    where: { email: emailPT }
-  });
-
-  if (adminExiste) {
-    console.log('⚠️ O utilizador administrador já se encontra registado.');
-    return;
-  }
-
-  // Criar o utilizador de acordo com os campos reais do teu schema
-  const ptAcesso = await prisma.userAdmin.create({
-    data: {
-      nome: nomePT,
-      email: emailPT,
-      passwordHash: passwordHash,
-      role: 'ADMIN', 
+  console.log('A iniciar semente...');
+  const hash = await bcrypt.hash('Admin@257-05', 10);
+  
+  await prisma.userAdmin.upsert({
+    where: { email: 'admin@gym.com' },
+    update: {},
+    create: {
+      nome: 'admin',
+      email: 'admin@gym.com',
+      passwordHash: hash,
+      role: 'ADMIN',
       isActive: true,
       mustChangePassword: false
     }
   });
-
-  console.log('\n===============================================');
-  console.log('✅ PERSONAL TRAINER ADMIN CRIADO COM SUCESSO!');
-  console.log(`👤 Nome: ${ptAcesso.nome}`);
-  console.log(`📧 Email: ${ptAcesso.email}`);
-  console.log(`🔑 Password: ${passwordCrua}`);
-  console.log('===============================================\n');
+  
+  console.log('ADMINISTRADOR CRIADO COM SUCESSO');
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Erro crítico ao executar o seed:', e);
-    process.exit(1);
-  })
+  .catch(console.error)
   .finally(async () => {
     await prisma.$disconnect();
   });
+EOF
