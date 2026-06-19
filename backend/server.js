@@ -18,6 +18,9 @@ const exerciseRoutes = require('./src/routes/exerciseRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Diz ao Express para confiar no proxy do Railway para o rate-limit ler o IP real do utilizador
+app.set('trust proxy', 1);
+
 // 2. Middlewares Globais de Segurança e Performance
 app.use(helmet({crossOriginResourcePolicy: { policy: "cross-origin" }}));
 
@@ -40,10 +43,11 @@ app.use(cors({
       return callback(new Error('Bloqueado pela política CORS do PT Control'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 100, // Limite de pedidos por IP
@@ -59,6 +63,7 @@ app.use(limiter);
 // 3. Permitir que o Express interprete corpos de mensagem em JSON (Obrigatório)
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
 // --- 4. REGISTO OFICIAL DAS ROTAS DA API ---
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
@@ -70,9 +75,9 @@ app.use('/api/exercises', exerciseRoutes);
 
 // Rota de Teste de Diagnóstico
 app.get('/api/status', (req, res) => {
-    res.json({ 
-        status: "online", 
-        message: "O servidor do PT está a funcionar corretamente e totalmente protegido!" 
+    res.json({
+        status: "online",
+        message: "O servidor do PT está a funcionar corretamente e totalmente protegido!"
     });
 });
 
