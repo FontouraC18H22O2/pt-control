@@ -1,7 +1,7 @@
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/weights';
-
+ 
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/weights`;
+ 
 const weightService = {
   // Guardar um novo registo de peso/carga levantada
   logWeight: async (payload) => {
@@ -13,7 +13,7 @@ const weightService = {
       throw error.response?.data?.error || 'Erro ao salvar o registo de peso.';
     }
   },
-
+ 
   // Procurar o histórico de progressão ordenado por data
   getWeightHistory: async (studentId, exerciseName) => {
     try {
@@ -27,5 +27,5 @@ const weightService = {
     }
   }
 };
-
+ 
 export default weightService;

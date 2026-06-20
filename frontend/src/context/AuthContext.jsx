@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
   // Função para comunicar com o endpoint de criar conta (registo)
   const register = async (nome, email, password) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/register', {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/register`, {
         nome,
         email,
         password
@@ -99,7 +99,7 @@ export function AuthProvider({ children }) {
       login, 
       register, 
       logout,
-      updateUserProps // 🔥 NOVO: Exposto globalmente para atualizar o estado do user
+      updateUserProps // 
     }}>
       {children}
     </AuthContext.Provider>

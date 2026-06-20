@@ -1,7 +1,7 @@
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/dashboard';
-
+ 
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/dashboard`;
+ 
 const dashboardService = {
   // Procurar as métricas gerais do sistema (Total, Ativos, Inativos, Planos)
   getStats: async () => {
@@ -14,5 +14,6 @@ const dashboardService = {
     }
   }
 };
-
+ 
 export default dashboardService;
+ 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/training';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/training`;
 
 const trainingService = {
   // 1. Procurar o plano de treino atual de um aluno específico

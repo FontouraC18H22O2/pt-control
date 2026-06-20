@@ -26,7 +26,7 @@ export default function Galeria() {
   // Estado para o Modal Customizado de Eliminação
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
 
-  const BACKEND_URL = 'http://localhost:5000';
+  const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const categories = ['Todos', 'Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdominais', 'Cardio'];
 
