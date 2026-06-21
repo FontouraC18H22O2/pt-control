@@ -6,6 +6,16 @@ import WeightModal from "../components/WeightModal";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+// 🔥 NOVO: Resolve o URL do GIF — se já for um link completo (Cloudinary), usa-o diretamente;
+// se for um caminho antigo/relativo (legado do disco do Railway), concatena com o BACKEND_URL
+const resolverGifUrl = (gifUrl) => {
+  if (!gifUrl) return null;
+  if (gifUrl.startsWith("http://") || gifUrl.startsWith("https://")) {
+    return gifUrl;
+  }
+  return `${BACKEND_URL}${gifUrl}`;
+};
+
 export default function Treinos() {
   const [alunos, setAlunos] = useState([]);
   const [alunoSelecionadoId, setAlunoSelecionadoId] = useState("");
@@ -402,7 +412,7 @@ export default function Treinos() {
                         >
                           {ex.gifUrl ? (
                             <img
-                              src={`${BACKEND_URL}${ex.gifUrl}`}
+                              src={resolverGifUrl(ex.gifUrl)}
                               alt={ex.name}
                               className="flex-shrink-0 object-cover w-10 h-10 border rounded-lg border-neutral-700"
                               onError={(e) => {
@@ -454,7 +464,7 @@ export default function Treinos() {
               {exerciseSelected?.gifUrl && (
                 <div className="flex items-center gap-3 p-2 mt-1 border rounded-xl bg-neutral-950 border-neutral-800">
                   <img
-                    src={`${BACKEND_URL}${exerciseSelected.gifUrl}`}
+                    src={resolverGifUrl(exerciseSelected.gifUrl)}
                     alt={exerciseSelected.name}
                     className="flex-shrink-0 object-cover w-16 h-16 border rounded-lg border-neutral-800"
                   />
@@ -588,7 +598,7 @@ export default function Treinos() {
                                   <div className="flex justify-center">
                                     {ex.gifUrl ? (
                                       <img
-                                        src={`${BACKEND_URL}${ex.gifUrl}`}
+                                        src={resolverGifUrl(ex.gifUrl)}
                                         alt={ex.exerciseName}
                                         className="object-cover w-12 h-12 border rounded-lg border-neutral-800"
                                         onError={(e) => {

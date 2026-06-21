@@ -28,6 +28,16 @@ export default function Galeria() {
 
   const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // 🔥 NOVO: Resolve o URL do GIF — se já for um link completo (Cloudinary), usa-o diretamente;
+  // se for um caminho antigo/relativo (legado do disco do Railway), concatena com o BACKEND_URL
+  const resolverGifUrl = (gifUrl) => {
+    if (!gifUrl) return null;
+    if (gifUrl.startsWith('http://') || gifUrl.startsWith('https://')) {
+      return gifUrl;
+    }
+    return `${BACKEND_URL}${gifUrl}`;
+  };
+
   const categories = ['Todos', 'Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdominais', 'Cardio'];
 
   // Função auxiliar para disparar Toasts de feedback
@@ -212,7 +222,7 @@ export default function Galeria() {
               <div className="relative flex items-center justify-center w-full overflow-hidden border aspect-square bg-neutral-950 rounded-xl border-neutral-900">
                 {exercise.gifUrl ? (
                   <img 
-                    src={`${BACKEND_URL}${exercise.gifUrl}`} 
+                    src={resolverGifUrl(exercise.gifUrl)} 
                     alt={exercise.name} 
                     className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"

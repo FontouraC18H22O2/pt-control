@@ -10,6 +10,16 @@ export default function VisualizarTreino() {
 
   const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // 🔥 NOVO: Resolve o URL do GIF — se já for um link completo (Cloudinary), usa-o diretamente;
+  // se for um caminho antigo/relativo (legado do disco do Railway), concatena com o BACKEND_URL
+  const resolverGifUrl = (gifUrl) => {
+    if (!gifUrl) return null;
+    if (gifUrl.startsWith('http://') || gifUrl.startsWith('https://')) {
+      return gifUrl;
+    }
+    return `${BACKEND_URL}${gifUrl}`;
+  };
+
   useEffect(() => {
     const fetchPlan = async () => {
       try {
@@ -68,7 +78,7 @@ export default function VisualizarTreino() {
               <div className="flex items-center justify-center w-full overflow-hidden border-b md:w-64 aspect-video md:aspect-square bg-neutral-950 md:border-b-0 md:border-r border-neutral-800">
                 {ex.gifUrl ? (
                   <img 
-                    src={`${BACKEND_URL}${ex.gifUrl}`} 
+                    src={resolverGifUrl(ex.gifUrl)} 
                     alt={ex.exerciseName}
                     className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
