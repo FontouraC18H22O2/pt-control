@@ -244,7 +244,7 @@ export default function Treinos() {
   const handleAbrirPreviewWhatsApp = () => {
     if (!alunoSelecionado) return;
     const textoMapeado = whatsappService.gerarTextoMensagem(
-      alunoSelecionado.fullName,
+      alunoSelecionado.nome,
       exercicios,
       notes,
       savedPlanId
@@ -278,7 +278,7 @@ export default function Treinos() {
         >
           <option value="">Escolha um aluno na lista...</option>
           {alunos.map(a => (
-            <option key={a.id} value={a.id}>{a.fullName} ({a.phoneNumber})</option>
+            <option key={a.id} value={a.id}>{a.nome} ({a.whatsapp})</option>
           ))}
         </select>
       </div>
@@ -625,7 +625,7 @@ export default function Treinos() {
             <div className="flex items-center justify-between p-4 border-b bg-neutral-950/60 border-neutral-800">
               <div>
                 <h3 className="text-xs font-black tracking-wider text-red-500 uppercase">Confirmação de Envio</h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Destinatário: {alunoSelecionado.fullName} · Dia {diaSelecionado}</p>
+                <p className="text-xs text-neutral-400 mt-0.5">Destinatário: {alunoSelecionado.nome} · Dia {diaSelecionado}</p>
               </div>
               <button onClick={() => setIsPreviewOpen(false)} className="p-1 text-sm cursor-pointer text-neutral-500 hover:text-white">✕</button>
             </div>
@@ -641,7 +641,7 @@ export default function Treinos() {
               <button onClick={() => setIsPreviewOpen(false)} className="w-full py-2.5 text-xs font-bold border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl cursor-pointer">Ajustar</button>
               <button
                 onClick={() => {
-                  const url = whatsappService.enviarPlanoTreino(alunoSelecionado.phoneNumber, alunoSelecionado.fullName, exercicios, notes, savedPlanId);
+                  const url = whatsappService.enviarPlanoTreino(alunoSelecionado.whatsapp, alunoSelecionado.nome, exercicios, notes, savedPlanId);
                   if (url) window.open(url, "_blank");
                   setIsPreviewOpen(false);
                 }}
