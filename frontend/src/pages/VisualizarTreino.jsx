@@ -63,13 +63,14 @@ export default function VisualizarTreino() {
   const planoAtivo = planos.find(p => p.dayNumber === abaAtiva);
 
   return (
+     <div className="flex items-center justify-center w-full min-h-screen p-4 bg-neutral-950 bg-gradient-to-br from-neutral-950 via-red-950/10 to-neutral-950 relative overflow-hidden before:absolute before:inset-0 before:bg-[linear-gradient(45deg,transparent_45%,rgba(220,38,38,0.04)_48%,rgba(220,38,38,0.08)_50%,rgba(220,38,38,0.04)_52%,transparent_55%)] before:pointer-events-none">
     <div className="min-h-screen text-white bg-neutral-950">
       {/* Cabeçalho */}
       <div className="p-4 border-b md:p-6 bg-neutral-900 border-neutral-800">
         <div className="max-w-4xl mx-auto">
           <span className="text-xs font-black tracking-widest text-red-500 uppercase">PT Control</span>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white md:text-3xl">
-            Olá, {studentName}! 💪
+            Olá, {studentName}! 
           </h1>
           <p className="mt-1 text-sm text-neutral-400">Aqui tens o teu plano de treino completo.</p>
         </div>
@@ -210,6 +211,7 @@ export default function VisualizarTreino() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
