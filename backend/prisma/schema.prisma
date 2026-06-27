@@ -31,6 +31,7 @@ model UserAdmin {
   students       Student[] 
   exercises      GlobalExercise[]
   schedules      TrainingSchedule[]
+  assessments    PhysicalAssessment[]
 
   @@map("users_admin")
 }
@@ -50,6 +51,7 @@ model Student {
   whatsappLogs  WhatsappLog[]
   weightLogs    WeightLog[]
   schedules     TrainingSchedule[]
+  assessments   PhysicalAssessment[]
 
   @@map("students")
 }
@@ -165,4 +167,63 @@ model VerificationCode {
   createdAt DateTime @default(now())
 
   @@map("verification_codes")
+}
+
+// 🔥 NOVO: Avaliação Física do Aluno
+model PhysicalAssessment {
+  id               Int       @id @default(autoincrement())
+  studentId        Int       @map("student_id")
+  userAdminId      Int       @map("user_admin_id")
+  assessmentDate   DateTime  @map("assessment_date") @db.Date
+
+  // Dados pessoais
+  profissao        String?
+  sexo             String?
+  idade            Int?
+  objetivos        String?   @db.Text
+  patologias       String?   @db.Text
+  medicamentos     String?   @db.Text
+  alcoolTabaco     String?   @map("alcool_tabaco")
+  experienciaTreino String?  @map("experiencia_treino")
+  nivelAtividade   String?   @map("nivel_atividade")
+  vezesSemana      Int?      @map("vezes_semana")
+
+  // Medidas corporais
+  peso             Decimal?  @db.Decimal(5,2)
+  altura           Decimal?  @db.Decimal(5,2)
+  imc              Decimal?  @db.Decimal(5,2)
+
+  bracoDireitoCm   Decimal?  @map("braco_direito_cm")  @db.Decimal(5,2)
+  bracoDireitoPct  Decimal?  @map("braco_direito_pct") @db.Decimal(5,2)
+  bracoDireitoKg   Decimal?  @map("braco_direito_kg")  @db.Decimal(5,2)
+  bracoEsquerdoCm  Decimal?  @map("braco_esquerdo_cm") @db.Decimal(5,2)
+  bracoEsquerdoPct Decimal?  @map("braco_esquerdo_pct") @db.Decimal(5,2)
+  bracoEsquerdoKg  Decimal?  @map("braco_esquerdo_kg") @db.Decimal(5,2)
+
+  pernaDireitaCm   Decimal?  @map("perna_direita_cm")  @db.Decimal(5,2)
+  pernaDireitaPct  Decimal?  @map("perna_direita_pct") @db.Decimal(5,2)
+  pernaDireitaKg   Decimal?  @map("perna_direita_kg")  @db.Decimal(5,2)
+  pernaEsquerdaCm  Decimal?  @map("perna_esquerda_cm") @db.Decimal(5,2)
+  pernaEsquerdaPct Decimal?  @map("perna_esquerda_pct") @db.Decimal(5,2)
+  pernaEsquerdaKg  Decimal?  @map("perna_esquerda_kg") @db.Decimal(5,2)
+
+  torax            Decimal?  @db.Decimal(5,2)
+  cintura          Decimal?  @db.Decimal(5,2)
+  abdomen          Decimal?  @db.Decimal(5,2)
+  quadril          Decimal?  @db.Decimal(5,2)
+
+  // Percentagens e composição corporal
+  pctMassaGorda    Decimal?  @map("pct_massa_gorda")    @db.Decimal(5,2)
+  pctAgua          Decimal?  @map("pct_agua")           @db.Decimal(5,2)
+  idadeMetabolica  Int?      @map("idade_metabolica")
+  tmb              Decimal?  @db.Decimal(7,2)
+  gorduraVisceral  Decimal?  @map("gordura_visceral")   @db.Decimal(5,2)
+  kgMassaMuscular  Decimal?  @map("kg_massa_muscular")  @db.Decimal(5,2)
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  userAdmin        UserAdmin @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
+
+  @@map("physical_assessments")
 }
