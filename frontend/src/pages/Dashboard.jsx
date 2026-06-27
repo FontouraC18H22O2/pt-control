@@ -337,10 +337,10 @@ export default function Dashboard() {
                 <div key={aluno.id} className="flex items-center justify-between p-3 border bg-neutral-950 rounded-xl border-neutral-800">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-neutral-700">
-                      {aluno.nome.charAt(0).toUpperCase()}
+                      {aluno.fullName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">{aluno.nome}</p>
+                      <p className="text-sm font-semibold text-white">{aluno.fullName}</p>
                       <p className="text-[10px] text-neutral-500">
                         {new Date(aluno.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>

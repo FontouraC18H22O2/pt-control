@@ -389,7 +389,7 @@ const getTrainerMetrics = async (req, res) => {
       where: { userAdminId: ptId },
       orderBy: { createdAt: 'desc' },
       take: 5,
-      select: { id: true, nome: true, status: true, createdAt: true }
+      select: { id: true, fullName: true, status: true, createdAt: true }
     });
 
     return res.status(200).json({
@@ -487,7 +487,7 @@ const updateAccessRequestStatus = async (req, res) => {
           </div>
 
           <div style="text-align: center; margin: 25px 0;">
-            <a href="https://pt-control.fit/" style="background-color: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+            <a href="https://pt-control.vercel.app/" style="background-color: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
               Aceder à Plataforma
             </a>
           </div>
