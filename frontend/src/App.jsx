@@ -14,6 +14,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import AccessRequests from "./pages/AccessRequests";
 import Perfil from "./pages/Perfil";
 import AvaliacaoFisica from "./pages/AvaliacaoFisica";
+import Templates from "./pages/Templates";
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          {/*  ALTERADO: agora usa studentId em vez de planId */}
+          {/* 🔥 ALTERADO: agora usa studentId em vez de planId */}
           <Route path="/meutreino/:studentId" element={<VisualizarTreino />} />
 
           <Route
@@ -41,6 +42,7 @@ function App() {
             <Route path="galeria" element={<ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}><Galeria /></ProtectedRoute>} />
             <Route path="perfil" element={<ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}><Perfil /></ProtectedRoute>} />
             <Route path="avaliacao" element={<ProtectedRoute allowedRoles={["PT"]}><AvaliacaoFisica /></ProtectedRoute>} />
+            <Route path="templates" element={<ProtectedRoute allowedRoles={["PT"]}><Templates /></ProtectedRoute>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

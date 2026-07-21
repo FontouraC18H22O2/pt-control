@@ -32,6 +32,7 @@ model UserAdmin {
   exercises      GlobalExercise[]
   schedules      TrainingSchedule[]
   assessments    PhysicalAssessment[]
+  templates      WorkoutTemplate[]
 
   @@map("users_admin")
 }
@@ -226,4 +227,33 @@ model PhysicalAssessment {
   userAdmin        UserAdmin @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
 
   @@map("physical_assessments")
+}
+
+// 🔥 NOVO: Templates de treino reutilizáveis
+model WorkoutTemplate {
+  id          Int                       @id @default(autoincrement())
+  userAdminId Int                       @map("user_admin_id")
+  name        String
+  description String?
+  createdAt   DateTime                  @default(now()) @map("created_at")
+
+  userAdmin   UserAdmin                 @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
+  exercises   WorkoutTemplateExercise[]
+
+  @@map("workout_templates")
+}
+
+model WorkoutTemplateExercise {
+  id           Int              @id @default(autoincrement())
+  templateId   Int              @map("template_id")
+  exerciseName String           @map("exercise_name")
+  sets         Int              @default(4)
+  reps         Int              @default(10)
+  restTime     String           @default("60s") @map("rest_time")
+  notes        String?          @db.Text
+  orderIndex   Int              @default(0) @map("order_index")
+
+  template     WorkoutTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("workout_template_exercises")
 }

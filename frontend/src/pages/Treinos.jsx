@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import studentService from "../services/studentService";
 import trainingService from "../services/trainingService";
 import whatsappService from "../services/whatsappService";
+import templateService from "../services/templateService";
 import WeightModal from "../components/WeightModal";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -59,6 +60,11 @@ export default function Treinos() {
   // Modal confirmar apagar dia
   const [confirmarApagarDia, setConfirmarApagarDia] = useState(false);
 
+  // 🔥 NOVO: Templates
+  const [templates, setTemplates] = useState([]);
+  const [modalTemplateAberto, setModalTemplateAberto] = useState(false);
+  const [modalConflito, setModalConflito] = useState(null); // template a importar quando há conflito
+
   // ─── Click fora do dropdown ───────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -93,6 +99,11 @@ export default function Treinos() {
       }
     };
     carregar();
+  }, []);
+
+  // 🔥 NOVO: Carregar templates
+  useEffect(() => {
+    templateService.getAll().then(setTemplates).catch(() => {});
   }, []);
 
   // ─── Ao mudar de aluno ────────────────────────────────────
@@ -199,6 +210,44 @@ export default function Treinos() {
     setExercicios(novos);
     setIsModificado(true);
     setIndexEditando(null);
+  };
+
+  // ─── Importar template ────────────────────────────────────
+  const handleImportarTemplate = (template) => {
+    const novosExercicios = template.exercises.map(ex => ({
+      exerciseName: ex.exerciseName,
+      gifUrl: biblioteca.find(b => b.name.toLowerCase() === ex.exerciseName.toLowerCase())?.gifUrl || null,
+      sets: ex.sets,
+      reps: ex.reps,
+      restTime: ex.restTime,
+      notes: ex.notes || ''
+    }));
+
+    if (exercicios.length > 0) {
+      // Há exercícios — pergunta o que fazer
+      setModalConflito({ template, novosExercicios });
+      setModalTemplateAberto(false);
+    } else {
+      // Sem exercícios — importa diretamente
+      setExercicios(novosExercicios);
+      setIsModificado(true);
+      setModalTemplateAberto(false);
+      showMsg('success', `Template "${template.name}" importado!`);
+    }
+  };
+
+  const handleConflitoSubstituir = () => {
+    setExercicios(modalConflito.novosExercicios);
+    setIsModificado(true);
+    showMsg('success', `Template "${modalConflito.template.name}" importado!`);
+    setModalConflito(null);
+  };
+
+  const handleConflitoAdicionar = () => {
+    setExercicios(prev => [...prev, ...modalConflito.novosExercicios]);
+    setIsModificado(true);
+    showMsg('success', `Exercícios do template "${modalConflito.template.name}" adicionados!`);
+    setModalConflito(null);
   };
 
   // ─── Guardar plano do dia atual ───────────────────────────
@@ -349,14 +398,25 @@ export default function Treinos() {
                   {exercicios.length} exercício(s) · {isModificado ? <span className="text-amber-400">● Não guardado</span> : <span className="text-emerald-400">● Guardado</span>}
                 </p>
               </div>
-              {savedPlanId && (
-                <button
-                  onClick={() => setConfirmarApagarDia(true)}
-                  className="px-3 py-1.5 text-xs font-medium text-red-400 transition-colors border rounded-lg cursor-pointer border-red-900/30 hover:bg-red-950/20"
-                >
-                  🗑️ Apagar Dia
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {/* 🔥 NOVO: Botão importar template */}
+                {templates.length > 0 && (
+                  <button
+                    onClick={() => setModalTemplateAberto(true)}
+                    className="px-3 py-1.5 text-xs font-bold text-white transition-colors border rounded-lg cursor-pointer border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                  >
+                    📋 Importar Template
+                  </button>
+                )}
+                {savedPlanId && (
+                  <button
+                    onClick={() => setConfirmarApagarDia(true)}
+                    className="px-3 py-1.5 text-xs font-medium text-red-400 transition-colors border rounded-lg cursor-pointer border-red-900/30 hover:bg-red-950/20"
+                  >
+                    🗑️ Apagar Dia
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -648,6 +708,63 @@ export default function Treinos() {
                 className="w-full py-2.5 text-xs font-black uppercase tracking-wider bg-fitnessGym text-white hover:bg-red-700 rounded-xl cursor-pointer"
               >
                 Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 🔥 NOVO: Modal escolher template */}
+      {modalTemplateAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden border shadow-2xl bg-neutral-900 border-neutral-800 rounded-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-neutral-800">
+              <div>
+                <h3 className="font-bold text-white">📋 Importar Template</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Escolhe um template para o Dia {diaSelecionado}</p>
+              </div>
+              <button onClick={() => setModalTemplateAberto(false)} className="text-sm cursor-pointer text-neutral-500 hover:text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+              {templates.map(t => (
+                <div key={t.id} className="p-4 transition-colors border cursor-pointer bg-neutral-950 border-neutral-800 rounded-xl hover:border-neutral-700" onClick={() => handleImportarTemplate(t)}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-bold text-white">{t.name}</h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400">{t.exercises.length} ex.</span>
+                  </div>
+                  {t.description && <p className="mb-2 text-xs text-neutral-500">{t.description}</p>}
+                  <div className="space-y-1">
+                    {t.exercises.slice(0, 3).map((ex, idx) => (
+                      <p key={idx} className="text-xs text-neutral-400">• {ex.exerciseName} — {ex.sets}×{ex.reps}</p>
+                    ))}
+                    {t.exercises.length > 3 && <p className="text-[10px] text-neutral-600">+{t.exercises.length - 3} mais...</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 NOVO: Modal conflito (já há exercícios) */}
+      {modalConflito && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm p-6 space-y-4 text-center border shadow-2xl bg-neutral-900 border-neutral-800 rounded-2xl">
+            <span className="text-3xl">⚠️</span>
+            <div>
+              <h3 className="font-bold text-white">Já existem exercícios</h3>
+              <p className="mt-1 text-xs text-neutral-400">
+                O Dia {diaSelecionado} já tem {exercicios.length} exercício(s). O que queres fazer com o template <span className="font-semibold text-white">"{modalConflito.template.name}"</span>?
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button onClick={handleConflitoSubstituir} className="w-full py-2.5 text-xs font-bold text-white rounded-xl bg-fitnessGym hover:bg-red-700 cursor-pointer">
+                🔄 Substituir tudo
+              </button>
+              <button onClick={handleConflitoAdicionar} className="w-full py-2.5 text-xs font-bold rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer">
+                ➕ Adicionar por cima
+              </button>
+              <button onClick={() => setModalConflito(null)} className="w-full py-2 text-xs cursor-pointer text-neutral-500 hover:text-neutral-400">
+                Cancelar
               </button>
             </div>
           </div>

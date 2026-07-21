@@ -16,6 +16,7 @@ const weightRoutes = require('./src/routes/weightRoutes');
 const exerciseRoutes = require('./src/routes/exerciseRoutes');
 const diagnosticsRoutes = require('./src/routes/diagnosticsRoutes');
 const assessmentRoutes = require('./src/routes/assessmentRoutes');
+const templateRoutes = require('./src/routes/templateRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,6 +79,7 @@ app.use('/api/weights', weightRoutes);
 app.use('/api/exercises', exerciseRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Rota de Teste de Diagnóstico
 app.get('/api/status', (req, res) => {
