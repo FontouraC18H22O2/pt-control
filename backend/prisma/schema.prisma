@@ -252,6 +252,7 @@ model WorkoutTemplateExercise {
   restTime     String           @default("60s") @map("rest_time")
   notes        String?          @db.Text
   orderIndex   Int              @default(0) @map("order_index")
+  dayNumber    Int              @default(1) @map("day_number")
 
   template     WorkoutTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
 

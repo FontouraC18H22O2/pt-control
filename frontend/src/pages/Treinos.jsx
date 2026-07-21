@@ -212,43 +212,72 @@ export default function Treinos() {
     setIndexEditando(null);
   };
 
-  // ─── Importar template ────────────────────────────────────
-  const handleImportarTemplate = (template) => {
-    const novosExercicios = template.exercises.map(ex => ({
-      exerciseName: ex.exerciseName,
-      gifUrl: biblioteca.find(b => b.name.toLowerCase() === ex.exerciseName.toLowerCase())?.gifUrl || null,
-      sets: ex.sets,
-      reps: ex.reps,
-      restTime: ex.restTime,
-      notes: ex.notes || ''
-    }));
+  // ─── Importar template (todos os dias) ───────────────────
+  const handleImportarTemplate = async (template) => {
+    // Agrupar exercícios por dia
+    const diasDoTemplate = [...new Set(template.exercises.map(e => e.dayNumber || 1))].sort((a,b) => a-b);
 
-    if (exercicios.length > 0) {
-      // Há exercícios — pergunta o que fazer
-      setModalConflito({ template, novosExercicios });
+    if (diasDoTemplate.length === 0) {
+      showMsg('error', 'Este template não tem exercícios.');
+      setModalTemplateAberto(false);
+      return;
+    }
+
+    const jaTemPlanos = planos.length > 0;
+
+    if (jaTemPlanos) {
+      setModalConflito({ template, diasDoTemplate });
       setModalTemplateAberto(false);
     } else {
-      // Sem exercícios — importa diretamente
-      setExercicios(novosExercicios);
-      setIsModificado(true);
+      await exportarTemplate(template, diasDoTemplate, false);
       setModalTemplateAberto(false);
-      showMsg('success', `Template "${template.name}" importado!`);
     }
   };
 
-  const handleConflitoSubstituir = () => {
-    setExercicios(modalConflito.novosExercicios);
-    setIsModificado(true);
-    showMsg('success', `Template "${modalConflito.template.name}" importado!`);
-    setModalConflito(null);
+  const exportarTemplate = async (template, diasDoTemplate, substituir) => {
+    try {
+      setLoading(true);
+      for (const dayNum of diasDoTemplate) {
+        const exsDoDia = template.exercises
+          .filter(e => (e.dayNumber || 1) === dayNum)
+          .map(ex => ({
+            exerciseName: ex.exerciseName,
+            gifUrl: biblioteca.find(b => b.name.toLowerCase() === ex.exerciseName.toLowerCase())?.gifUrl || null,
+            sets: ex.sets,
+            reps: ex.reps,
+            restTime: ex.restTime,
+            notes: ex.notes || ''
+          }));
+
+        // Se substituir, apaga o plano existente deste dia antes
+        if (substituir) {
+          const planoExistente = planos.find(p => p.dayNumber === dayNum);
+          if (planoExistente?.id) {
+            await trainingService.deletePlan(planoExistente.id);
+          }
+        }
+
+        await trainingService.saveTrainingPlan({
+          studentId: alunoSelecionadoId,
+          name: `Dia ${dayNum}`,
+          dayNumber: dayNum,
+          notes: '',
+          exercises: exsDoDia
+        });
+      }
+      await carregarPlanosAluno(alunoSelecionadoId);
+      setDiaSelecionado(diasDoTemplate[0]);
+      showMsg('success', `Template "${template.name}" exportado com sucesso! (${diasDoTemplate.length} dia(s))`);
+    } catch (err) {
+      showMsg('error', 'Erro ao exportar template.');
+    } finally {
+      setLoading(false);
+      setModalConflito(null);
+    }
   };
 
-  const handleConflitoAdicionar = () => {
-    setExercicios(prev => [...prev, ...modalConflito.novosExercicios]);
-    setIsModificado(true);
-    showMsg('success', `Exercícios do template "${modalConflito.template.name}" adicionados!`);
-    setModalConflito(null);
-  };
+  const handleConflitoSubstituir = () => exportarTemplate(modalConflito.template, modalConflito.diasDoTemplate, true);
+  const handleConflitoAdicionar = () => exportarTemplate(modalConflito.template, modalConflito.diasDoTemplate, false);
 
   // ─── Guardar plano do dia atual ───────────────────────────
   const handleSavePlano = async () => {
@@ -745,23 +774,23 @@ export default function Treinos() {
         </div>
       )}
 
-      {/* 🔥 NOVO: Modal conflito (já há exercícios) */}
+      {/* 🔥 NOVO: Modal conflito */}
       {modalConflito && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-sm p-6 space-y-4 text-center border shadow-2xl bg-neutral-900 border-neutral-800 rounded-2xl">
             <span className="text-3xl">⚠️</span>
             <div>
-              <h3 className="font-bold text-white">Já existem exercícios</h3>
+              <h3 className="font-bold text-white">Já existem planos</h3>
               <p className="mt-1 text-xs text-neutral-400">
-                O Dia {diaSelecionado} já tem {exercicios.length} exercício(s). O que queres fazer com o template <span className="font-semibold text-white">"{modalConflito.template.name}"</span>?
+                O aluno já tem {planos.length} plano(s) criado(s). O template <span className="font-semibold text-white">"{modalConflito.template.name}"</span> tem {modalConflito.diasDoTemplate.length} dia(s). O que queres fazer?
               </p>
             </div>
             <div className="space-y-2">
               <button onClick={handleConflitoSubstituir} className="w-full py-2.5 text-xs font-bold text-white rounded-xl bg-fitnessGym hover:bg-red-700 cursor-pointer">
-                🔄 Substituir tudo
+                🔄 Substituir dias existentes
               </button>
               <button onClick={handleConflitoAdicionar} className="w-full py-2.5 text-xs font-bold rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer">
-                ➕ Adicionar por cima
+                ➕ Adicionar sem substituir
               </button>
               <button onClick={() => setModalConflito(null)} className="w-full py-2 text-xs cursor-pointer text-neutral-500 hover:text-neutral-400">
                 Cancelar

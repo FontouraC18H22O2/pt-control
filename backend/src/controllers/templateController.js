@@ -10,13 +10,11 @@ const prisma = new PrismaClient({ adapter });
 const getTemplates = async (req, res) => {
   try {
     const ptId = req.userId;
-
     const templates = await prisma.workoutTemplate.findMany({
       where: { userAdminId: ptId },
-      include: { exercises: { orderBy: { orderIndex: 'asc' } } },
+      include: { exercises: { orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }] } },
       orderBy: { createdAt: 'desc' }
     });
-
     return res.status(200).json(templates);
   } catch (error) {
     console.error('❌ Erro ao listar templates:', error.message);
@@ -32,9 +30,7 @@ const createTemplate = async (req, res) => {
     const ptId = req.userId;
     const { name, description, exercises } = req.body;
 
-    if (!name?.trim()) {
-      return res.status(400).json({ error: 'O nome do template é obrigatório.' });
-    }
+    if (!name?.trim()) return res.status(400).json({ error: 'O nome do template é obrigatório.' });
 
     const template = await prisma.workoutTemplate.create({
       data: {
@@ -48,11 +44,12 @@ const createTemplate = async (req, res) => {
             reps: parseInt(ex.reps) || 10,
             restTime: ex.restTime || '60s',
             notes: ex.notes || null,
-            orderIndex: idx
+            dayNumber: parseInt(ex.dayNumber) || 1,
+            orderIndex: ex.orderIndex ?? idx
           }))
         }
       },
-      include: { exercises: { orderBy: { orderIndex: 'asc' } } }
+      include: { exercises: { orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }] } }
     });
 
     return res.status(201).json({ message: 'Template criado com sucesso!', template });
@@ -76,7 +73,6 @@ const updateTemplate = async (req, res) => {
     if (!template) return res.status(404).json({ error: 'Template não encontrado.' });
     if (template.userAdminId !== ptId) return res.status(403).json({ error: 'Acesso negado.' });
 
-    // Apaga exercícios antigos e cria novos
     await prisma.workoutTemplateExercise.deleteMany({ where: { templateId: id } });
 
     const updated = await prisma.workoutTemplate.update({
@@ -91,11 +87,12 @@ const updateTemplate = async (req, res) => {
             reps: parseInt(ex.reps) || 10,
             restTime: ex.restTime || '60s',
             notes: ex.notes || null,
-            orderIndex: idx
+            dayNumber: parseInt(ex.dayNumber) || 1,
+            orderIndex: ex.orderIndex ?? idx
           }))
         }
       },
-      include: { exercises: { orderBy: { orderIndex: 'asc' } } }
+      include: { exercises: { orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }] } }
     });
 
     return res.status(200).json({ message: 'Template atualizado!', template: updated });
