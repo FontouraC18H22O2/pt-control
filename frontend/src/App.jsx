@@ -15,7 +15,7 @@ import AccessRequests from "./pages/AccessRequests";
 import Perfil from "./pages/Perfil";
 import AvaliacaoFisica from "./pages/AvaliacaoFisica";
 import Templates from "./pages/Templates";
-import { Analytics } from '@vercel/analytics/react';
+
 
 function App() {
   return (
@@ -49,7 +49,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-      <Analytics />
     </AuthProvider>
   );
 }
