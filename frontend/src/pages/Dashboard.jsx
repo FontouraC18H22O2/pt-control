@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getTrainerMetrics } from '../services/adminService';
 import { getSystemStatus } from '../services/diagnosticsService';
+import maintenanceService from '../services/maintenanceService';
 
 function StatusBadge({ status }) {
   const config = {
@@ -50,6 +51,10 @@ export default function Dashboard() {
   const [loadingStatus, setLoadingStatus] = useState(isAdmin);
   const [statusError, setStatusError] = useState('');
 
+  // 🔧 Estado de manutenção
+  const [manutencao, setManutencao] = useState(false);
+  const [loadingManutencao, setLoadingManutencao] = useState(false);
+
   useEffect(() => {
     if (!isAdmin) {
       const carregar = async () => {
@@ -66,6 +71,23 @@ export default function Dashboard() {
     }
   }, [isAdmin]);
 
+  const handleToggleManutencao = async () => {
+    try {
+      setLoadingManutencao(true);
+      if (manutencao) {
+        await maintenanceService.disable();
+        setManutencao(false);
+      } else {
+        await maintenanceService.enable();
+        setManutencao(true);
+      }
+    } catch (err) {
+      console.error('Erro ao alterar modo de manutenção:', err);
+    } finally {
+      setLoadingManutencao(false);
+    }
+  };
+
   const carregarSystemStatus = async () => {
     try {
       setLoadingStatus(true);
@@ -80,7 +102,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (isAdmin) carregarSystemStatus();
+    if (isAdmin) {
+      carregarSystemStatus();
+      maintenanceService.getStatus().then(setManutencao).catch(() => {});
+    }
   }, [isAdmin]);
 
   // ==========================================
@@ -103,6 +128,33 @@ export default function Dashboard() {
           >
             {loadingStatus ? '🔄 A verificar...' : '🔄 Atualizar Diagnóstico'}
           </button>
+        </div>
+
+        <div className="p-5 space-y-4 border bg-neutral-900 border-neutral-800 rounded-2xl">
+          <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+            <div>
+              <h3 className="text-base font-bold text-white">🔧 Modo de Manutenção</h3>
+              <p className="mt-0.5 text-xs text-neutral-500">Ativa antes de fazer deploy — bloqueia o acesso de todos exceto o Admin.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${manutencao ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                {manutencao ? '🔧 Ativo' : '✅ Normal'}
+              </span>
+              <button onClick={handleToggleManutencao} disabled={loadingManutencao} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${manutencao ? 'bg-amber-500' : 'bg-neutral-700'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${manutencao ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </div>
+          {manutencao && (
+            <div className="p-3 border bg-amber-500/5 border-amber-500/20 rounded-xl">
+              <p className="text-xs font-medium text-amber-400">⚠️ A plataforma está em manutenção. Os PTs e alunos não conseguem aceder. Desativa após o deploy estar concluído.</p>
+            </div>
+          )}
+          <div className="text-[10px] text-neutral-600 space-y-1">
+            <p>• Liga antes de fazer commit + push</p>
+            <p>• Aguarda o deploy terminar no Railway e Vercel</p>
+            <p>• Desliga quando tudo estiver operacional</p>
+          </div>
         </div>
 
         <div className="p-5 space-y-4 border bg-neutral-900 border-neutral-800 rounded-2xl">

@@ -6,7 +6,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// 1. Importar todos os módulos de rotas criados (Sem Duplicações)
+// 1. Importar todos os módulos de rotas
 const authRoutes = require('./src/routes/authRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
 const trainingRoutes = require('./src/routes/trainingRoutes');
@@ -17,31 +17,29 @@ const exerciseRoutes = require('./src/routes/exerciseRoutes');
 const diagnosticsRoutes = require('./src/routes/diagnosticsRoutes');
 const assessmentRoutes = require('./src/routes/assessmentRoutes');
 const templateRoutes = require('./src/routes/templateRoutes');
+const maintenanceRoutes = require('./src/routes/maintenanceRoutes');
+
+//  Middleware de manutenção
+const { maintenanceMiddleware } = require('./src/middlewares/maintenanceMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Diz ao Express para confiar no proxy do Railway para o rate-limit ler o IP real do utilizador
 app.set('trust proxy', 1);
 
-// 2. Middlewares Globais de Segurança e Performance
-app.use(helmet({crossOriginResourcePolicy: { policy: "cross-origin" }}));
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-// Configuração Dinâmica e Segura do CORS
 const allowedOrigins = [
-  'https://pt-control.vercel.app',            // Domínio padrão da Vercel
-  'https://pt-control.fit',                   // 🔥 Domínio próprio de produção
-  'https://www.pt-control.fit',                // 🔥 Variante com www, por segurança
-  'http://localhost:5173',                    // Ambiente de desenvolvimento local do Vite
-  process.env.FRONTEND_URL                    // Fallback para qualquer variável definida no Railway
-].filter(Boolean); // Remove valores nulos ou indefinidos
+  'https://pt-control.vercel.app',
+  'https://pt-control.fit',
+  'https://www.pt-control.fit',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite pedidos sem origem (ex: Postman, ferramentas de monitorização ou chamadas internas)
     if (!origin) return callback(null, true);
-    
-    // Verifica se a origem está na lista de permitidos OU se termina em .vercel.app
     if (allowedOrigins.indexOf(origin) !== -1 || /\.vercel\.app$/.test(origin)) {
       return callback(null, true);
     } else {
@@ -54,22 +52,22 @@ app.use(cors({
 }));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Limite de pedidos por IP
-  message: {
-    error: 'Bloqueio por excesso de tráfego',
-    message: 'Demasiados pedidos vindos deste IP. Por favor, tente novamente após 15 minutos.'
-  },
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Bloqueio por excesso de tráfego', message: 'Demasiados pedidos. Tente novamente após 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use(limiter);
 
-// 3. Permitir que o Express interprete corpos de mensagem em JSON (Obrigatório)
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// --- 4. REGISTO OFICIAL DAS ROTAS DA API ---
+//  Middleware de manutenção — aplicado ANTES de todas as rotas da API
+app.use('/api', maintenanceMiddleware);
+
+// 4. Rotas da API
+app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/training', trainingRoutes);
@@ -81,15 +79,10 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/templates', templateRoutes);
 
-// Rota de Teste de Diagnóstico
 app.get('/api/status', (req, res) => {
-    res.json({
-        status: "online",
-        message: "O servidor do PT está a funcionar corretamente e totalmente protegido!"
-    });
+  res.json({ status: "online", message: "O servidor do PT está a funcionar corretamente!" });
 });
 
-// Iniciar o Servidor
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor backend a correr na porta http://localhost:${PORT}`);
+  console.log(`🚀 Servidor backend a correr na porta http://localhost:${PORT}`);
 });
