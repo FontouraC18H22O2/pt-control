@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
@@ -23,18 +23,29 @@ function AppContent() {
   const { role, isAuthenticated, authLoading } = useAuth();
   const [manutencao, setManutencao] = useState(false);
   const [verificandoManutencao, setVerificandoManutencao] = useState(true);
+  const manutencaoRef = useRef(false);
 
-  useEffect(() => {
-    maintenanceService.getStatus().then(status => {
+  const verificarManutencao = async () => {
+    try {
+      const status = await maintenanceService.getStatus();
+      manutencaoRef.current = status;
       setManutencao(status);
-    }).catch(() => {
+    } catch {
       setManutencao(false);
-    }).finally(() => {
-      setVerificandoManutencao(false);
-    });
+    }
+  };
+
+  // Verificação inicial
+  useEffect(() => {
+    verificarManutencao().finally(() => setVerificandoManutencao(false));
   }, []);
 
-  // Aguarda AMBOS: auth do localStorage E estado de manutenção
+  // 🔥 Polling a cada 30 segundos — deteta mudanças em tempo real
+  useEffect(() => {
+    const interval = setInterval(verificarManutencao, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (authLoading || verificandoManutencao) {
     return (
       <div className="flex items-center justify-center min-h-screen text-white bg-neutral-950">
@@ -43,27 +54,25 @@ function AppContent() {
     );
   }
 
-  // Cenário 1: Não autenticado + manutenção → Login com banner
-  // Cenário 2: Autenticado PT + manutenção → Página manutenção
-  // Cenário 3: ADMIN → sempre acesso total
   if (manutencao && isAuthenticated && role !== 'ADMIN') {
-    return <Manutencao />;
+    return <Manutencao onManutencaoDesligada={() => setManutencao(false)} />;
   }
 
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated && role !== null ? <Navigate to="/dashboard" replace /> : <Login manutencaoAtiva={manutencao} />} />
+      <Route path="/" element={
+        isAuthenticated && role !== null
+          ? <Navigate to="/dashboard" replace />
+          : <Login manutencaoAtiva={manutencao} onManutencaoResolvida={() => setManutencao(false)} />
+      } />
       <Route path="/register" element={<Register />} />
       <Route path="/meutreino/:studentId" element={<VisualizarTreino />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/dashboard" element={
+        <ProtectedRoute allowedRoles={["ADMIN", "PT", "GUEST"]}>
+          <DashboardLayout />
+        </ProtectedRoute>
+      }>
         <Route index element={<ProtectedRoute allowedRoles={["ADMIN", "PT"]}><Dashboard /></ProtectedRoute>} />
         <Route path="personal-trainers" element={<ProtectedRoute allowedRoles={["ADMIN"]}><GestaoPTs /></ProtectedRoute>} />
         <Route path="pedidos-acesso" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AccessRequests /></ProtectedRoute>} />
