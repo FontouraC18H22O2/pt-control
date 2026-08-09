@@ -19,9 +19,8 @@ import Manutencao from "./pages/Manutencao";
 import maintenanceService from "./services/maintenanceService";
 import { Analytics } from '@vercel/analytics/react';
 
-// Wrapper que verifica manutenção e protege todas as rotas exceto ADMIN
 function AppContent() {
-  const { role } = useAuth();
+  const { role, isAuthenticated } = useAuth();
   const [manutencao, setManutencao] = useState(false);
   const [verificando, setVerificando] = useState(true);
 
@@ -35,17 +34,20 @@ function AppContent() {
     });
   }, []);
 
-  // Enquanto verifica, mostra nada (evita flash)
   if (verificando) return null;
 
-  // Se está em manutenção e não é ADMIN, mostra página de manutenção
-  if (manutencao && role !== 'ADMIN') {
+  // 🔥 CORRIGIDO:
+  // - Não autenticado → deixa passar para o login (com banner de aviso)
+  // - Autenticado mas não ADMIN → mostra página de manutenção
+  // - ADMIN → sempre tem acesso
+  if (manutencao && isAuthenticated && role !== 'ADMIN') {
     return <Manutencao />;
   }
 
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      {/* Passa o estado de manutenção ao Login para mostrar o banner */}
+      <Route path="/" element={<Login manutencaoAtiva={manutencao} />} />
       <Route path="/register" element={<Register />} />
       <Route path="/meutreino/:studentId" element={<VisualizarTreino />} />
 

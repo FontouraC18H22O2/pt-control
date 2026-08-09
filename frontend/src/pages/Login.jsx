@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api'; 
 
-export default function Login() {
+export default function Login({ manutencaoAtiva = false }) {
   const { login } = useAuth(); 
   const navigate = useNavigate();
 
@@ -63,6 +63,19 @@ export default function Login() {
           </h1>
           <p className="text-sm text-neutral-400">Insira as suas credenciais de treinador</p>
         </div>
+
+        {/* 🔥 Banner de manutenção — aparece só quando o Admin ativou */}
+        {manutencaoAtiva && (
+          <div className="flex items-start gap-3 p-3.5 border rounded-xl bg-amber-500/10 border-amber-500/20">
+            <span className="text-lg shrink-0">🔧</span>
+            <div>
+              <p className="text-xs font-bold text-amber-400">Plataforma em Manutenção</p>
+              <p className="text-[11px] text-amber-400/80 mt-0.5">
+                O sistema está temporariamente em manutenção. Apenas administradores podem aceder.
+              </p>
+            </div>
+          </div>
+        )}
 
         {erro && (
           <div className="p-3 text-xs text-red-400 border bg-red-500/10 border-red-500/20 rounded-xl animate-pulse">

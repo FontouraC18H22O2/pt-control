@@ -271,7 +271,7 @@ export default function Perfil() {
               Clica em <strong className="text-white">Solicitar Código</strong> para receber um token de 6 dígitos no teu e-mail atual.
             </p>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <input
                 type="text"
                 maxLength={6}
@@ -285,7 +285,7 @@ export default function Perfil() {
                 type="button"
                 onClick={solicitarCodigo2FA}
                 disabled={loadingCodigo}
-                className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold rounded-xl transition-colors text-white disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                className="w-full sm:w-auto px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-bold rounded-xl transition-colors text-white disabled:opacity-50 cursor-pointer whitespace-nowrap"
               >
                 {loadingCodigo ? '📨 A enviar...' : codigoEnviado ? '🔄 Reenviar' : '📨 Solicitar Código'}
               </button>

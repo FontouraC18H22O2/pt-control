@@ -6,9 +6,10 @@ export default function DashboardLayout() {
   const [sidebarAberta, setSidebarAberta] = useState(false);
 
   return (
-    <div className="min-h-screen bg-neutral-950 bg-gradient-to-br from-neutral-950 via-red-950/10 to-neutral-950 text-white flex relative before:absolute before:inset-0 before:bg-[linear-gradient(45deg,transparent_45%,rgba(220,38,38,0.04)_48%,rgba(220,38,38,0.08)_50%,rgba(220,38,38,0.04)_52%,transparent_55%)] before:pointer-events-none">
+    // h-screen + overflow-hidden no contentor raiz — isola o scroll
+    <div className="h-screen overflow-hidden bg-neutral-950 bg-gradient-to-br from-neutral-950 via-red-950/10 to-neutral-950 text-white flex relative before:absolute before:inset-0 before:bg-[linear-gradient(45deg,transparent_45%,rgba(220,38,38,0.04)_48%,rgba(220,38,38,0.08)_50%,rgba(220,38,38,0.04)_52%,transparent_55%)] before:pointer-events-none">
 
-      {/* 🔥 MOBILE: Overlay escuro quando a sidebar está aberta */}
+      {/* MOBILE: Overlay escuro quando a sidebar está aberta */}
       {sidebarAberta && (
         <div
           className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden"
@@ -16,7 +17,7 @@ export default function DashboardLayout() {
         />
       )}
 
-      {/* Sidebar — no mobile é um drawer deslizante, no desktop é estática */}
+      {/* Sidebar — fixed no mobile, estática no desktop */}
       <div className={`
         fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out
         md:static md:translate-x-0 md:z-auto md:transition-none
@@ -25,8 +26,8 @@ export default function DashboardLayout() {
         <Sidebar onFechar={() => setSidebarAberta(false)} />
       </div>
 
-      {/* Zona de Conteúdo Dinâmico */}
-      <main className="flex-1 min-h-screen overflow-y-auto">
+      {/* Conteúdo principal — scroll isolado aqui, não no body */}
+      <main className="flex-1 h-full overflow-y-auto" id="main-scroll">
 
         {/* MOBILE: Barra de topo com botão hambúrguer */}
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b md:hidden bg-neutral-900/95 backdrop-blur border-neutral-800">
