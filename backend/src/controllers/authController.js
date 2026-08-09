@@ -127,8 +127,9 @@ const createTrainerAccount = async (req, res) => {
       return res.status(400).json({ error: 'Este e-mail já possui uma conta ativa registada no sistema.' });
     }
 
-    // Definição da password simples padrão provisória
-    const passwordProvisoria = 'Mudar123!';
+    // Password provisória aleatória segura — nunca hardcoded no código
+    const passwordProvisoria = process.env.DEFAULT_PT_PASSWORD || 
+      crypto.randomBytes(8).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) + '!Pt';
     const hashedPassword = await bcrypt.hash(passwordProvisoria, 10);
 
     // Inserção física no MariaDB via Prisma Client
@@ -245,11 +246,11 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais incorretas.' });
     }
 
-    // 4. Gerar o token JWT de acesso
+    // 4. Gerar o token JWT — payload mínimo, sem dados sensíveis
     const token = jwt.sign(
-      { userId: user.id, nome: user.nome, role: user.role },
+      { userId: user.id, role: user.role }, // 🔒 Só o necessário, sem nome ou email
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' } // 🔒 24h em vez de 7d
     );
 
     // 5. Atualizar os metadados de auditoria de login

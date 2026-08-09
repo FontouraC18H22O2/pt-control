@@ -30,11 +30,17 @@ export function AuthProvider({ children }) {
 
   // Função para registar o login com sucesso recebendo os dados do backend
   const login = (newToken, userData) => {
+    // 🔒 localStorage mínimo — só o token e dados não sensíveis
     localStorage.setItem('pt_api_token', newToken);
-    localStorage.setItem('pt_api_user', JSON.stringify(userData)); 
-    localStorage.setItem('pt_api_role', userData.role); 
+    localStorage.setItem('pt_api_user', JSON.stringify({
+      id: userData.id,
+      nome: userData.nome,
+      role: userData.role,
+      mustChangePassword: userData.mustChangePassword
+      // 🔒 Sem email no localStorage
+    }));
+    localStorage.setItem('pt_api_role', userData.role);
     
-    // Injeta o token no cabeçalho padrão do Axios
     axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     
     setToken(newToken);
@@ -92,7 +98,8 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      isAuthenticated: !!token, 
+      isAuthenticated: !!token,
+      authLoading: loading, 
       token, 
       user, 
       role, 

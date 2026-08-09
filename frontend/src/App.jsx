@@ -20,9 +20,9 @@ import maintenanceService from "./services/maintenanceService";
 import { Analytics } from '@vercel/analytics/react';
 
 function AppContent() {
-  const { role, isAuthenticated } = useAuth();
+  const { role, isAuthenticated, authLoading } = useAuth();
   const [manutencao, setManutencao] = useState(false);
-  const [verificando, setVerificando] = useState(true);
+  const [verificandoManutencao, setVerificandoManutencao] = useState(true);
 
   useEffect(() => {
     maintenanceService.getStatus().then(status => {
@@ -30,23 +30,28 @@ function AppContent() {
     }).catch(() => {
       setManutencao(false);
     }).finally(() => {
-      setVerificando(false);
+      setVerificandoManutencao(false);
     });
   }, []);
 
-  if (verificando) return null;
+  // Aguarda AMBOS: auth do localStorage E estado de manutenção
+  if (authLoading || verificandoManutencao) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-white bg-neutral-950">
+        <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-fitnessGym"></div>
+      </div>
+    );
+  }
 
-  // 🔥 CORRIGIDO:
-  // - Não autenticado → deixa passar para o login (com banner de aviso)
-  // - Autenticado mas não ADMIN → mostra página de manutenção
-  // - ADMIN → sempre tem acesso
+  // Cenário 1: Não autenticado + manutenção → Login com banner
+  // Cenário 2: Autenticado PT + manutenção → Página manutenção
+  // Cenário 3: ADMIN → sempre acesso total
   if (manutencao && isAuthenticated && role !== 'ADMIN') {
     return <Manutencao />;
   }
 
   return (
     <Routes>
-      {/* Passa o estado de manutenção ao Login para mostrar o banner */}
       <Route path="/" element={<Login manutencaoAtiva={manutencao} />} />
       <Route path="/register" element={<Register />} />
       <Route path="/meutreino/:studentId" element={<VisualizarTreino />} />
