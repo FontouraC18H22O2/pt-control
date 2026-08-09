@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   closestCenter,
@@ -6,7 +7,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
   MeasuringStrategy,
 } from "@dnd-kit/core";
 import {
@@ -33,71 +33,89 @@ const resolverGifUrl = (gifUrl) => {
   return `${BACKEND_URL}${gifUrl}`;
 };
 
-// ─── Linha sortable da tabela desktop ────────────────────────
-function SortableRow({ ex, index, estaEditando, exercicioEditado, setExercicioEditado, handleIniciarEdicao, handleSalvarEdicao, setIndexEditando, handleRemoveExercicio, isModificado, setModalExerciseName, setIsModalOpen }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ex._uid });
+// Contador global para UIDs únicos
+let uidCounter = 0;
+const gerarUid = () => `uid-${++uidCounter}-${Date.now()}`;
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : 'auto',
-  };
+// ─── Item desktop com drag HTML5 nativo ──────────────────────
+function DragRow({ ex, index, dragIndex, dropIndex, isDraggingActive, onDragStart, onDragOver, onDrop, onDragEnd, estaEditando, exercicioEditado, setExercicioEditado, handleIniciarEdicao, handleSalvarEdicao, setIndexEditando, handleRemoveExercicio, isModificado, setModalExerciseName, setIsModalOpen }) {
+  const isBeingDragged = dragIndex === index;
+  const isDropTarget = dropIndex === index && isDraggingActive && dragIndex !== index;
 
   return (
-    <tr ref={setNodeRef} style={style} className={`transition-colors ${isDragging ? 'bg-neutral-800' : 'hover:bg-neutral-900/40'}`}>
-      {/* Handle de arrastar */}
-      <td className="w-8 p-2 text-center">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-neutral-600 hover:text-neutral-400 transition-colors touch-none"
-          title="Arrastar para reordenar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
-            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-            <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-          </svg>
-        </button>
-      </td>
-      <td className="w-16 p-3 text-center">
+    <div
+      draggable={false}
+      onDragOver={e => { e.preventDefault(); onDragOver(index); }}
+      onDrop={e => { e.preventDefault(); onDrop(index); }}
+      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all duration-150 ${
+        isBeingDragged
+          ? 'opacity-30 bg-neutral-800 border-neutral-700 scale-[0.98]'
+          : isDropTarget
+            ? 'border-red-500/50 bg-red-500/5'
+            : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'
+      }`}
+    >
+      {/* Handle HTML5 drag */}
+      <div
+        draggable
+        onDragStart={e => { e.dataTransfer.effectAllowed = "move"; onDragStart(index); }}
+        onDragEnd={onDragEnd}
+        className="cursor-grab active:cursor-grabbing text-neutral-600 hover:text-neutral-400 transition-colors shrink-0 p-1 select-none"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+        </svg>
+      </div>
+
+      {/* GIF */}
+      <div className="shrink-0">
         {ex.gifUrl ? (
-          <img src={resolverGifUrl(ex.gifUrl)} alt={ex.exerciseName} className="object-cover w-10 h-10 mx-auto border rounded-lg border-neutral-800" onError={e => e.target.style.display = "none"} />
+          <img src={resolverGifUrl(ex.gifUrl)} alt={ex.exerciseName} className="object-cover w-10 h-10 border rounded-lg border-neutral-800" onError={e => e.target.style.display = "none"} />
         ) : (
-          <div className="flex items-center justify-center w-10 h-10 mx-auto text-xs border rounded-lg border-neutral-800 bg-neutral-900 text-neutral-600">—</div>
+          <div className="flex items-center justify-center w-10 h-10 text-xs border rounded-lg border-neutral-800 bg-neutral-900 text-neutral-600">—</div>
         )}
-      </td>
-      <td className="p-3 font-semibold text-white">{ex.exerciseName}</td>
-      <td className="p-3 font-mono text-center">
-        {estaEditando ? <input type="number" value={exercicioEditado.sets} onChange={e => setExercicioEditado(p => ({...p, sets: e.target.value}))} className="px-1 py-1 text-xs text-center text-white border rounded outline-none w-14 bg-neutral-950 border-neutral-800 focus:border-red-500" /> : ex.sets}
-      </td>
-      <td className="p-3 font-mono text-center">
-        {estaEditando ? <input type="number" value={exercicioEditado.reps} onChange={e => setExercicioEditado(p => ({...p, reps: e.target.value}))} className="px-1 py-1 text-xs text-center text-white border rounded outline-none w-14 bg-neutral-950 border-neutral-800 focus:border-red-500" /> : ex.reps}
-      </td>
-      <td className="p-3 font-mono text-center text-neutral-400">
-        {estaEditando ? <input type="text" value={exercicioEditado.restTime} onChange={e => setExercicioEditado(p => ({...p, restTime: e.target.value}))} className="w-16 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500" /> : ex.restTime}
-      </td>
-      <td className="p-3 text-xs text-neutral-400 max-w-[100px] truncate">
-        {estaEditando ? <input type="text" value={exercicioEditado.notes} onChange={e => setExercicioEditado(p => ({...p, notes: e.target.value}))} className="w-full px-2 py-1 text-xs text-white border rounded outline-none bg-neutral-950 border-neutral-800 focus:border-red-500" /> : ex.notes || "—"}
-      </td>
-      <td className="p-3 text-right">
-        <div className="flex items-center justify-end gap-2">
-          {estaEditando ? (
-            <>
-              <button onClick={() => handleSalvarEdicao(index)} className="text-xs font-bold cursor-pointer text-emerald-400 hover:text-emerald-300">Gravar</button>
-              <button onClick={() => setIndexEditando(null)} className="text-xs cursor-pointer text-neutral-500 hover:text-neutral-400">Cancelar</button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => handleIniciarEdicao(index, ex)} className="text-xs transition-colors cursor-pointer text-neutral-400 hover:text-white">✏️</button>
-              <button onClick={() => { setModalExerciseName(ex.exerciseName); setIsModalOpen(true); }} disabled={isModificado} className={`text-xs cursor-pointer ${isModificado ? "text-neutral-600 opacity-40" : "text-fitnessGym hover:text-emerald-400"}`}>📈</button>
-              <button onClick={() => handleRemoveExercicio(index)} className="text-xs text-red-400 transition-colors cursor-pointer hover:text-red-500">✕</button>
-            </>
-          )}
+      </div>
+
+      {/* Nome */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{ex.exerciseName}</p>
+        {ex.notes && !estaEditando && <p className="text-[10px] text-neutral-500 italic truncate">{ex.notes}</p>}
+      </div>
+
+      {/* Séries / Reps / Descanso */}
+      {estaEditando ? (
+        <div className="flex items-center gap-2 shrink-0">
+          <input type="number" value={exercicioEditado.sets} onChange={e => setExercicioEditado(p => ({...p, sets: e.target.value}))} className="w-12 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-900 border-neutral-700 focus:border-red-500" />
+          <span className="text-neutral-600 text-xs">×</span>
+          <input type="number" value={exercicioEditado.reps} onChange={e => setExercicioEditado(p => ({...p, reps: e.target.value}))} className="w-12 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-900 border-neutral-700 focus:border-red-500" />
+          <input type="text" value={exercicioEditado.restTime} onChange={e => setExercicioEditado(p => ({...p, restTime: e.target.value}))} className="w-14 px-1 py-1 text-xs text-center text-white border rounded outline-none bg-neutral-900 border-neutral-700 focus:border-red-500" />
+          <input type="text" value={exercicioEditado.notes} onChange={e => setExercicioEditado(p => ({...p, notes: e.target.value}))} placeholder="Notas" className="w-24 px-2 py-1 text-xs text-white border rounded outline-none bg-neutral-900 border-neutral-700 focus:border-red-500" />
         </div>
-      </td>
-    </tr>
+      ) : (
+        <div className="flex items-center gap-3 shrink-0 text-xs font-mono">
+          <span className="text-white font-bold">{ex.sets}<span className="text-neutral-600">×</span>{ex.reps}</span>
+          <span className="text-red-400">{ex.restTime}</span>
+        </div>
+      )}
+
+      {/* Ações */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {estaEditando ? (
+          <>
+            <button onClick={() => handleSalvarEdicao(index)} className="text-xs font-bold cursor-pointer text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded-lg bg-emerald-500/10">✓</button>
+            <button onClick={() => setIndexEditando(null)} className="text-xs cursor-pointer text-neutral-500 hover:text-neutral-400 px-2 py-1 rounded-lg bg-neutral-800">✕</button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => handleIniciarEdicao(index, ex)} className="text-xs transition-colors cursor-pointer text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800">✏️</button>
+            <button onClick={() => { setModalExerciseName(ex.exerciseName); setIsModalOpen(true); }} disabled={isModificado} className={`text-xs cursor-pointer p-1.5 rounded-lg ${isModificado ? "text-neutral-600 opacity-40" : "text-fitnessGym hover:bg-neutral-800"}`}>📈</button>
+            <button onClick={() => handleRemoveExercicio(index)} className="text-xs text-red-400 transition-colors cursor-pointer hover:text-red-500 p-1.5 rounded-lg hover:bg-red-950/20">✕</button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -202,7 +220,55 @@ export default function Treinos() {
   const [modalTemplateAberto, setModalTemplateAberto] = useState(false);
   const [modalConflito, setModalConflito] = useState(null);
 
-  // ─── DnD sensors ─────────────────────────────────────────────
+  // ─── Drag HTML5 nativo (desktop) ─────────────────────────────
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dropIndex, setDropIndex] = useState(null);
+  const [isDraggingActive, setIsDraggingActive] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  // Rastreia posição do rato durante o drag
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDraggingActive) {
+        setMousePos({ x: e.clientX, y: e.clientY });
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [isDraggingActive]);
+
+  const handleDragStartNative = (index) => {
+    setDragIndex(index);
+    setIsDraggingActive(true);
+    setIndexEditando(null);
+  };
+
+  const handleDragOverNative = (index) => {
+    if (dragIndex === null || dragIndex === index) return;
+    setDropIndex(index);
+  };
+
+  const handleDropNative = (index) => {
+    if (dragIndex === null || dragIndex === index) return;
+    setExercicios(prev => {
+      const nova = [...prev];
+      const [item] = nova.splice(dragIndex, 1);
+      nova.splice(index, 0, item);
+      return nova;
+    });
+    setIsModificado(true);
+    setDragIndex(null);
+    setDropIndex(null);
+    setIsDraggingActive(false);
+  };
+
+  const handleDragEndNative = () => {
+    setDragIndex(null);
+    setDropIndex(null);
+    setIsDraggingActive(false);
+  };
+
+  // ─── DnD @dnd-kit sensors (mobile) ───────────────────────────
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -215,16 +281,27 @@ export default function Treinos() {
   }, []);
 
   const [activeDragItem, setActiveDragItem] = useState(null);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+
+  // Rastrear posição do cursor globalmente
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleDragStart = (event) => {
     const { active } = event;
     const ex = exercicios.find(e => e._uid === active.id);
     setActiveDragItem(ex || null);
+    setIndexEditando(null);
   };
 
-  const handleDragEnd = (event) => {
+  // 🔥 Move em tempo real enquanto arrasta — dá a animação de reorder
+  const handleDragOver = (event) => {
     const { active, over } = event;
-    setActiveDragItem(null);
     if (!over || active.id === over.id) return;
     setExercicios(prev => {
       const oldIndex = prev.findIndex(e => e._uid === active.id);
@@ -232,9 +309,23 @@ export default function Treinos() {
       if (oldIndex === -1 || newIndex === -1) return prev;
       return arrayMove(prev, oldIndex, newIndex);
     });
-    setIsModificado(true);
-    setIndexEditando(null);
   };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+    if (!over) return;
+    // A reorder já aconteceu no onDragOver, só marcamos como modificado
+    setIsModificado(true);
+  };
+
+  // Garante que todos os exercícios têm _uid antes de criar os IDs
+  useEffect(() => {
+    setExercicios(prev => prev.map((ex, i) => ({
+      ...ex,
+      _uid: ex._uid || gerarUid()
+    })));
+  }, []);
 
   // IDs únicos estáveis para o dnd-kit
   const sortableIds = exercicios.map(e => e._uid).filter(Boolean);
@@ -278,7 +369,7 @@ export default function Treinos() {
       // Adiciona _uid estável a cada exercício carregado da BD
       setExercicios((plano.exercises || []).map((ex, i) => ({
         ...ex,
-        _uid: ex._uid || `uid-${plano.id}-${i}-${Date.now()}`
+        _uid: ex._uid || gerarUid()
       })));
     }
     else { setSavedPlanId(null); setNotes(""); setExercicios([]); }
@@ -323,7 +414,7 @@ export default function Treinos() {
     const nome = exerciseSelected?.name || exerciseSearch.trim();
     if (!nome) return;
     setExercicios([...exercicios, {
-      _uid: `uid-${Date.now()}-${Math.random()}`,
+      _uid: gerarUid(),
       exerciseName: nome,
       gifUrl: exerciseSelected?.gifUrl || null,
       sets: parseInt(sets) || 4,
@@ -514,7 +605,7 @@ export default function Treinos() {
               <div className="space-y-4 xl:col-span-2">
                 <div className="p-5 space-y-4 border bg-neutral-900 border-neutral-800 rounded-2xl">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold tracking-wider uppercase text-neutral-400">Observações do Dia</label>
+                    <label className="text-xs font-semibold tracking-wider uppercase text-neutral-400">🏋️ Plano de Treino — Dia {diaSelecionado}</label>
                     <input type="text" placeholder="Ex: Foco em hipertrofia..." value={notes} onChange={e => { setNotes(e.target.value); setIsModificado(true); }} className="w-full px-4 py-2.5 text-sm text-white border outline-none bg-neutral-950 border-neutral-800 rounded-xl focus:border-fitnessGym placeholder-neutral-600" />
                   </div>
 
@@ -530,56 +621,48 @@ export default function Treinos() {
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
                     onDragEnd={handleDragEnd}
                     modifiers={[restrictToVerticalAxis]}
                     measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
                   >
                   <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
 
-                      {/* DESKTOP: Tabela */}
-                      <div className="hidden overflow-hidden border md:block border-neutral-800 rounded-xl bg-neutral-950">
-                        <table className="w-full text-sm text-left border-collapse">
-                          <thead>
-                            <tr className="text-xs font-medium tracking-wider uppercase border-b bg-neutral-900 text-neutral-400 border-neutral-800">
-                              <th className="w-8 p-2"></th>
-                              <th className="p-3">GIF</th>
-                              <th className="p-3">Exercício</th>
-                              <th className="p-3 text-center">Séries</th>
-                              <th className="p-3 text-center">Reps</th>
-                              <th className="p-3 text-center">Descanso</th>
-                              <th className="p-3">Notas</th>
-                              <th className="p-3 text-right">Ações</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-800 text-neutral-300">
-                            {exercicios.length > 0 ? exercicios.map((ex, index) => (
-                              <SortableRow
-                                key={`ex-${index}`}
-                                ex={ex}
-                                index={index}
-                                estaEditando={indexEditando === index}
-                                exercicioEditado={exercicioEditado}
-                                setExercicioEditado={setExercicioEditado}
-                                handleIniciarEdicao={handleIniciarEdicao}
-                                handleSalvarEdicao={handleSalvarEdicao}
-                                setIndexEditando={setIndexEditando}
-                                handleRemoveExercicio={handleRemoveExercicio}
-                                isModificado={isModificado}
-                                setModalExerciseName={setModalExerciseName}
-                                setIsModalOpen={setIsModalOpen}
-                              />
-                            )) : (
-                              <tr><td colSpan="8" className="p-6 text-xs italic text-center text-neutral-600">Nenhum exercício. Adiciona pelo formulário ao lado.</td></tr>
-                            )}
-                          </tbody>
-                        </table>
+                      {/* DESKTOP: drag HTML5 nativo */}
+                      <div className="hidden md:block space-y-2">
+                        {exercicios.length > 0 ? exercicios.map((ex, index) => (
+                          <DragRow
+                            key={ex._uid || index}
+                            ex={ex}
+                            index={index}
+                            dragIndex={dragIndex}
+                            dropIndex={dropIndex}
+                            isDraggingActive={isDraggingActive}
+                            onDragStart={handleDragStartNative}
+                            onDragOver={handleDragOverNative}
+                            onDrop={handleDropNative}
+                            onDragEnd={handleDragEndNative}
+                            estaEditando={indexEditando === index}
+                            exercicioEditado={exercicioEditado}
+                            setExercicioEditado={setExercicioEditado}
+                            handleIniciarEdicao={handleIniciarEdicao}
+                            handleSalvarEdicao={handleSalvarEdicao}
+                            setIndexEditando={setIndexEditando}
+                            handleRemoveExercicio={handleRemoveExercicio}
+                            isModificado={isModificado}
+                            setModalExerciseName={setModalExerciseName}
+                            setIsModalOpen={setIsModalOpen}
+                          />
+                        )) : (
+                          <div className="p-6 text-xs italic text-center border border-dashed text-neutral-600 border-neutral-800 rounded-xl">Nenhum exercício. Adiciona pelo formulário ao lado.</div>
+                        )}
                       </div>
 
                       {/* MOBILE: Cartões */}
                       <div className="space-y-3 md:hidden">
                         {exercicios.length > 0 ? exercicios.map((ex, index) => (
                           <SortableCard
-                            key={`ex-${index}`}
+                            key={ex._uid}
                             ex={ex}
                             index={index}
                             estaEditando={indexEditando === index}
@@ -600,25 +683,34 @@ export default function Treinos() {
 
                     </SortableContext>
 
-                    {/* DragOverlay com position fixed — renderiza por cima de tudo */}
-                    <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
-                      {activeDragItem ? (
-                        <div className="bg-neutral-800 border border-red-500/40 rounded-xl shadow-2xl shadow-black/80 px-4 py-3 flex items-center gap-3 opacity-95 cursor-grabbing" style={{ width: '420px', pointerEvents: 'none' }}>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-                            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
-                            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-                            <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-                          </svg>
-                          {activeDragItem.gifUrl ? (
-                            <img src={resolverGifUrl(activeDragItem.gifUrl)} alt={activeDragItem.exerciseName} className="w-10 h-10 object-cover rounded-lg border border-neutral-700 shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-600 text-xs flex items-center justify-center shrink-0">—</div>
-                          )}
-                          <span className="font-bold text-white truncate flex-1">{activeDragItem.exerciseName}</span>
-                          <span className="text-xs text-neutral-400 shrink-0 font-mono">{activeDragItem.sets}×{activeDragItem.reps} · {activeDragItem.restTime}</span>
-                        </div>
-                      ) : null}
-                    </DragOverlay>
+                    {/* Overlay manual via portal — segue o cursor com position:fixed */}
+                    {activeDragItem && createPortal(
+                      <div
+                        style={{
+                          position: 'fixed',
+                          left: cursorPos.x + 16,
+                          top: cursorPos.y - 24,
+                          width: '380px',
+                          zIndex: 9999,
+                          pointerEvents: 'none',
+                        }}
+                        className="bg-neutral-800 border border-red-500/40 rounded-xl shadow-2xl shadow-black/80 px-4 py-3 flex items-center gap-3 opacity-95"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                          <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                        </svg>
+                        {activeDragItem.gifUrl ? (
+                          <img src={resolverGifUrl(activeDragItem.gifUrl)} alt={activeDragItem.exerciseName} className="w-10 h-10 object-cover rounded-lg border border-neutral-700 shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-600 text-xs flex items-center justify-center shrink-0">—</div>
+                        )}
+                        <span className="font-bold text-white truncate flex-1">{activeDragItem.exerciseName}</span>
+                        <span className="text-xs text-neutral-400 shrink-0 font-mono">{activeDragItem.sets}×{activeDragItem.reps} · {activeDragItem.restTime}</span>
+                      </div>,
+                      document.body
+                    )}
                   </DndContext>
 
                   <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
@@ -705,6 +797,26 @@ export default function Treinos() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Indicador ↕ que segue o rato durante drag no desktop */}
+      {isDraggingActive && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: mousePos.x + 14,
+            top: mousePos.y - 14,
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 border border-red-500/40 shadow-xl shadow-black/60"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+          <span className="text-[11px] font-bold text-red-400">Mover</span>
+        </div>,
+        document.body
       )}
 
     </div>
