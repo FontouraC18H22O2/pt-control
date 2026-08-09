@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios'; //  CORRIGIDO: O import correto da biblioteca do Axios!
+import axios from 'axios'; // 🔥 CORRIGIDO: O import correto da biblioteca do Axios!
 
 // Criar o Contexto de Autenticação
 const AuthContext = createContext(null);
@@ -21,15 +21,35 @@ export function AuthProvider({ children }) {
         const parsedUser = JSON.parse(storedUser);
         setToken(storedToken);
         setUser(parsedUser);
-        setRole(parsedUser.role); //  Role vem do user, não de uma chave separada
+        setRole(parsedUser.role);
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       } catch {
-        // JSON inválido — limpa tudo
         localStorage.removeItem('pt_api_token');
         localStorage.removeItem('pt_api_user');
       }
     }
     setLoading(false);
+  }, []);
+
+  // 🔒 Interceptor global — logout automático quando token expira (401)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          // Token expirado ou inválido — limpa tudo e vai para login
+          localStorage.removeItem('pt_api_token');
+          localStorage.removeItem('pt_api_user');
+          delete axios.defaults.headers.common['Authorization'];
+          setToken(null);
+          setUser(null);
+          setRole(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+    // Limpa o interceptor quando o componente desmonta
+    return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
   // Função para registar o login com sucesso recebendo os dados do backend
