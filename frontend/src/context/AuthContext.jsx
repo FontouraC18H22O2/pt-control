@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios'; // 🔥 CORRIGIDO: O import correto da biblioteca do Axios!
+import axios from 'axios'; //  CORRIGIDO: O import correto da biblioteca do Axios!
 
 // Criar o Contexto de Autenticação
 const AuthContext = createContext(null);
@@ -14,16 +14,20 @@ export function AuthProvider({ children }) {
   // Efeito executado ao iniciar a aplicação para recuperar o token e dados guardados
   useEffect(() => {
     const storedToken = localStorage.getItem('pt_api_token');
-    const storedUser = localStorage.getItem('pt_api_user'); 
-    const storedRole = localStorage.getItem('pt_api_role'); 
+    const storedUser = localStorage.getItem('pt_api_user');
 
-    if (storedToken && storedUser && storedRole) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      setRole(storedRole); 
-      
-      // Define o token por padrão para todos os pedidos HTTP futuros do Axios
-      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+    if (storedToken && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setToken(storedToken);
+        setUser(parsedUser);
+        setRole(parsedUser.role); //  Role vem do user, não de uma chave separada
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      } catch {
+        // JSON inválido — limpa tudo
+        localStorage.removeItem('pt_api_token');
+        localStorage.removeItem('pt_api_user');
+      }
     }
     setLoading(false);
   }, []);
@@ -39,7 +43,7 @@ export function AuthProvider({ children }) {
       mustChangePassword: userData.mustChangePassword
       // 🔒 Sem email no localStorage
     }));
-    localStorage.setItem('pt_api_role', userData.role);
+    
     
     axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     
@@ -77,7 +81,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('pt_api_token');
     localStorage.removeItem('pt_api_user'); 
-    localStorage.removeItem('pt_api_role'); 
+     
     
     // Remove o cabeçalho de autorização do Axios
     delete axios.defaults.headers.common['Authorization'];
