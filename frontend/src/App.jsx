@@ -52,7 +52,7 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Login manutencaoAtiva={manutencao} />} />
+      <Route path="/" element={isAuthenticated && role !== null ? <Navigate to="/dashboard" replace /> : <Login manutencaoAtiva={manutencao} />} />
       <Route path="/register" element={<Register />} />
       <Route path="/meutreino/:studentId" element={<VisualizarTreino />} />
 
