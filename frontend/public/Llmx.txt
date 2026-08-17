@@ -28,7 +28,6 @@ PT Control é uma aplicação web SaaS que permite a Personal Trainers gerir os 
 ## URLs importantes
 
 - Aplicação: https://pt-control.fit
-- API: https://pt-trainning-manager-production.up.railway.app
 
 ## Público-alvo
 
