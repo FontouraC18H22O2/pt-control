@@ -1,0 +1,44 @@
+# PT Control
+
+> Plataforma de gestão para Personal Trainers em Portugal.
+
+## Descrição
+
+PT Control é uma aplicação web SaaS que permite a Personal Trainers gerir os seus alunos, prescrever planos de treino personalizados com múltiplos dias, fazer avaliações físicas e partilhar planos via WhatsApp.
+
+## Funcionalidades
+
+- Gestão de alunos com número de telefone internacional
+- Planos de treino com múltiplos dias (Dia 1 a Dia 7) por aluno
+- Templates de treino reutilizáveis com múltiplos dias
+- Avaliação física completa com silhueta corporal e métricas
+- Galeria de exercícios com GIFs animados
+- Partilha de planos via WhatsApp com link direto
+- Página pública para o aluno ver o seu plano e avaliação física
+- Painel de administração com modo de manutenção
+
+## Tecnologias
+
+- Frontend: React, Vite, Tailwind CSS (Vercel)
+- Backend: Node.js, Express, Prisma ORM (Railway)
+- Base de Dados: MariaDB
+- Emails: Resend
+- Imagens: Cloudinary
+
+## URLs importantes
+
+- Aplicação: https://pt-control.fit
+- API: https://pt-trainning-manager-production.up.railway.app
+
+## Público-alvo
+
+Personal Trainers que querem digitalizar a gestão dos seus atletas e prescrição de treinos.
+
+## Idioma
+
+Português (Portugal)
+
+## Opcional
+
+- [Sitemap](https://pt-control.fit/sitemap.xml)
+- [robots.txt](https://pt-control.fit/robots.txt)

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /meutreino/
+Disallow: /dashboard/
+Disallow: /register
+
+Sitemap: https://pt-control.fit/sitemap.xml
