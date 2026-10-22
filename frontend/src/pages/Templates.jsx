@@ -77,17 +77,25 @@ export default function Templates() {
 
   // ─── Dias ────────────────────────────────────────────────
   const adicionarDia = () => {
-    const proximoNum = Math.max(...dias.map(d => d.dayNumber)) + 1;
-    if (proximoNum > 7) return;
-    setDias(prev => [...prev, diaVazio(proximoNum)]);
-    setDiaAtivo(proximoNum);
-  };
+  if (dias.length >= 7) return;
+  const proximoNum = dias.length + 1; // sempre sequencial
+  setDias(prev => [...prev, diaVazio(proximoNum)]);
+  setDiaAtivo(proximoNum);
+};
 
   const removerDia = (dayNumber) => {
-    if (dias.length === 1) return;
-    setDias(prev => prev.filter(d => d.dayNumber !== dayNumber));
-    setDiaAtivo(dias.find(d => d.dayNumber !== dayNumber)?.dayNumber || 1);
-  };
+  if (dias.length === 1) return;
+
+  // Filtra o dia removido e renumera os restantes em sequência (1, 2, 3...)
+  const diasRestantes = dias
+    .filter(d => d.dayNumber !== dayNumber)
+    .map((d, idx) => ({ ...d, dayNumber: idx + 1 }));
+
+  setDias(diasRestantes);
+
+  // Ativa o primeiro dia disponível após a remoção
+  setDiaAtivo(diasRestantes[0]?.dayNumber || 1);
+};
 
   const diaAtivoObj = dias.find(d => d.dayNumber === diaAtivo);
 
