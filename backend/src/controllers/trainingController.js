@@ -202,7 +202,31 @@ const deletePlan = async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
 
+    const studentId = plano.studentId;
+    const dayNumberApagado = plano.dayNumber;
+
+    // Apaga o plano pedido
     await prisma.trainingPlan.delete({ where: { id } });
+
+    // Renumera os dias seguintes: qualquer dia com dayNumber > o apagado
+    // recebe dayNumber - 1, mantendo a sequência sem lacunas
+    if (dayNumberApagado !== null) {
+      const diasSeguintes = await prisma.trainingPlan.findMany({
+        where: {
+          studentId,
+          dayNumber: { gt: dayNumberApagado }
+        },
+        orderBy: { dayNumber: 'asc' }
+      });
+
+      for (const dia of diasSeguintes) {
+        await prisma.trainingPlan.update({
+          where: { id: dia.id },
+          data: { dayNumber: dia.dayNumber - 1 }
+        });
+      }
+    }
+
     return res.status(200).json({ message: 'Plano eliminado com sucesso.' });
   } catch (error) {
     console.error('❌ Erro ao eliminar plano:', error);
